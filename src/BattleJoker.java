@@ -19,6 +19,7 @@ public class BattleJoker extends Application {
             // currently hardcoded, change later
             // change to a dialog box and ask user for the ip address and the port
             clientSocket = new Socket("127.0.0.1", 12345);
+            // editing new edit
 
         } catch (Exception ex) {
             throw new RuntimeException(ex);
