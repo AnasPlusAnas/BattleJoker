@@ -6,7 +6,7 @@ import java.net.Socket;
 import java.sql.SQLException;
 
 public class BattleJoker extends Application {
-    private Socket clientSocket;
+   // private Socket clientSocket;
 
     @Override
     public void start(Stage primaryStage) {
@@ -16,10 +16,10 @@ public class BattleJoker extends Application {
             win.setName(dialog.getPlayername());
             Database.connect();
 
+
             // currently hardcoded, change later
             // change to a dialog box and ask user for the ip address and the port
-            clientSocket = new Socket("127.0.0.1", 12345);
-
+            //clientSocket = new Socket("127.0.0.1", 12345);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }

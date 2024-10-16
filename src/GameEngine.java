@@ -1,8 +1,19 @@
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
 public class GameEngine {
+    // server stuff
+    Thread recieverThread;
+    Socket clientSocket;
+    DataInputStream dataInStream;
+    DataOutputStream dataOutStream;
+
+    // game setting
     public static final int LIMIT = 14;
     public static final int SIZE = 4;
     final int[] board = new int[SIZE * SIZE];
@@ -21,6 +32,28 @@ public class GameEngine {
     private final Map<String, Runnable> actionMap = new HashMap<>();
 
     private GameEngine() {
+        try {
+            clientSocket = new Socket("127.0.0.1", 12345);
+            dataInStream = new DataInputStream(clientSocket.getInputStream());
+            dataOutStream = new DataOutputStream(clientSocket.getOutputStream());
+
+            recieverThread = new Thread(() -> {
+                try {
+                    while (true) {
+                        char direction = (char) dataInStream.read();
+                        System.out.println(direction);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+            recieverThread.start();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.exit(-1); // should not just exit, maybe show a dialog to the user for more options
+        }
+
         // define a hash map to contain the links from the actions to the corresponding methods
         actionMap.put("UP", this::moveUp);
         actionMap.put("DOWN", this::moveDown);
@@ -69,6 +102,15 @@ public class GameEngine {
      * @param dir
      */
     public void moveMerge(String dir) {
+        System.out.println(dir);
+        // send the data to the server
+        try {
+            dataOutStream.write(dir.charAt(0));
+            dataOutStream.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
         synchronized (board) {
             if (actionMap.containsKey(dir)) {
                 combo = numOfTilesMoved = 0;
