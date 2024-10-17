@@ -87,29 +87,29 @@ public class GameWindow {
     private void initCanvas() {
         canvas.setOnKeyPressed(event -> {
             gameEngine.moveMerge(event.getCode().toString());
-            scoreLabel.setText("Score: " + gameEngine.getScore());
-            levelLabel.setText("Level: " + gameEngine.getLevel());
-            comboLabel.setText("Combo: " + gameEngine.getCombo());
-            moveCountLabel.setText("# of Moves: " + gameEngine.getMoveCount());
+//            scoreLabel.setText("Score: " + gameEngine.getScore());
+//            levelLabel.setText("Level: " + gameEngine.getLevel());
+//            comboLabel.setText("Combo: " + gameEngine.getCombo());
+//            moveCountLabel.setText("# of Moves: " + gameEngine.getMoveCount());
         });
 
         animationTimer = new AnimationTimer() {
             @Override
             public void handle(long now) {
                 render();
-                if (gameEngine.isGameOver()) {
-                    System.out.println("Game Over!");
-                    animationTimer.stop();
-
-                    Platform.runLater(() -> {
-                        try {
-                            new ScoreboardWindow();
-                        } catch (IOException ex) {
-                            throw new RuntimeException(ex);
-                        }
-                    });
-
-                }
+//                if (gameEngine.isGameOver()) {
+//                    System.out.println("Game Over!");
+//                    animationTimer.stop();
+//
+//                    Platform.runLater(() -> {
+//                        try {
+//                            new ScoreboardWindow();
+//                        } catch (IOException ex) {
+//                            throw new RuntimeException(ex);
+//                        }
+//                    });
+//
+//                }
             }
         };
         canvas.requestFocus();
@@ -139,10 +139,10 @@ public class GameWindow {
             for (int j = 0; j < GameEngine.SIZE; j++) {
                 gc.drawImage(images[0], x, y, blockSize, blockSize);  // Draw the background
 
-                v = gameEngine.getValue(i, j);
+//                v = gameEngine.getValue(i, j);
 
-                if (v > 0)  // if a card is in the place, draw it
-                    gc.drawImage(images[v], x + padding, y + padding, cardSize, cardSize);
+//                if (v > 0)  // if a card is in the place, draw it
+//                    gc.drawImage(images[v], x + padding, y + padding, cardSize, cardSize);
 
                 x += blockSize;
             }
@@ -172,6 +172,6 @@ public class GameWindow {
 
     public void setName(String name) {
         nameLabel.setText(name);
-        gameEngine.setPlayerName(name);
+//        gameEngine.setPlayerName(name);
     }
 }
