@@ -1,20 +1,107 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<!--<?xml version="1.0" encoding="UTF-8"?>-->
+
+<!--<?import javafx.scene.control.Button?>-->
+<!--<?import javafx.scene.control.TextField?>-->
+<!--<?import javafx.scene.layout.VBox?>-->
+<!--<?import javafx.scene.text.Font?>-->
+
+<!--<?import javafx.scene.layout.HBox?>-->
+<!--<?import javafx.scene.control.Label?>-->
+<!--<VBox alignment="CENTER" minHeight="200.0" prefHeight="100.0" prefWidth="300.0" spacing="10" xmlns="http://javafx.com/javafx/18"-->
+<!--      xmlns:fx="http://javafx.com/fxml/1">-->
+<!--    &lt;!&ndash; Name &ndash;&gt;-->
+<!--    <HBox alignment="CENTER" spacing="10">-->
+<!--        <Label text="Name:"/>-->
+<!--        <TextField fx:id="nameField" minWidth="200" promptText="Input Your Name Here" alignment="CENTER_RIGHT">-->
+<!--            <font>-->
+<!--                <Font size="17.0"/>-->
+<!--            </font>-->
+<!--        </TextField>-->
+<!--    </HBox>-->
+
+<!--    &lt;!&ndash; IP Address &ndash;&gt;-->
+<!--    <HBox alignment="CENTER_LEFT" spacing="10">-->
+<!--        <Label text="IP Address:"/>-->
+<!--        <TextField fx:id="ipField" promptText="IP Address" maxWidth="200" minWidth="200">-->
+<!--            <font>-->
+<!--                <Font size="17.0"/>-->
+<!--            </font>-->
+<!--        </TextField>-->
+<!--    </HBox>-->
+
+<!--    &lt;!&ndash; Port &ndash;&gt;-->
+<!--    <HBox alignment="CENTER_LEFT" spacing="10">-->
+<!--        <Label text="Port:"/>-->
+<!--        <TextField fx:id="portField" promptText="Port" maxWidth="200" minWidth="200">-->
+<!--            <font>-->
+<!--                <Font size="17.0"/>-->
+<!--            </font>-->
+<!--        </TextField>-->
+<!--    </HBox>-->
+
+<!--    <Button fx:id="goButton" text="GO!">-->
+<!--        <font>-->
+<!--            <Font size="15.0"/>-->
+<!--        </font>-->
+<!--    </Button>-->
+<!--</VBox>-->
 
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.control.Label?>
 
-<VBox alignment="CENTER" prefHeight="100.0" prefWidth="300.0" spacing="10" xmlns="http://javafx.com/javafx/18"
-      xmlns:fx="http://javafx.com/fxml/1">
-    <TextField fx:id="nameField" alignment="CENTER" maxWidth="200" minWidth="200" promptText="Input Your Name Here">
+<GridPane
+        fx:id="getNameDialogPane"
+        alignment="CENTER"
+        hgap="10"
+        vgap="10"
+        minWidth="350.0"
+        prefWidth="350.0"
+        prefHeight="300"
+        xmlns="http://javafx.com/javafx/18"
+        xmlns:fx="http://javafx.com/fxml/1"
+>
+    <Label text="Name:" GridPane.rowIndex="0" GridPane.columnIndex="0">
+        <font>
+            <Font size="17.0"/>
+        </font>
+    </Label>
+    <TextField fx:id="nameField" GridPane.rowIndex="0" GridPane.columnIndex="1">
         <font>
             <Font size="17.0"/>
         </font>
     </TextField>
-    <Button fx:id="goButton" text="GO!">
+
+    <Label text="IP Address:" GridPane.rowIndex="1" GridPane.columnIndex="0">
         <font>
-            <Font size="15.0"/>
+            <Font size="17.0"/>
+        </font>
+    </Label>
+    <TextField fx:id="ipField" GridPane.rowIndex="1" GridPane.columnIndex="1">
+        <font>
+            <Font size="17.0"/>
+        </font>
+    </TextField>
+
+    <Label text="Port:" GridPane.rowIndex="2" GridPane.columnIndex="0">
+        <font>
+            <Font size="17.0"/>
+        </font>
+    </Label>
+    <TextField fx:id="portField" GridPane.rowIndex="2" GridPane.columnIndex="1">
+        <font>
+            <Font size="17.0"/>
+        </font>
+    </TextField>
+
+    <!-- Error message label -->
+    <Label fx:id="errorLabel" GridPane.rowIndex="3" GridPane.columnSpan="2" textFill="red" />
+
+    <Button fx:id="goButton" text="GO!" GridPane.rowIndex="4" GridPane.columnSpan="2" prefWidth="Infinity">
+        <font>
+            <Font size="17.0"/>
         </font>
     </Button>
-</VBox>
+</GridPane>
