@@ -35,10 +35,10 @@ public class JokerServer {
 
     public JokerServer(int port) throws IOException {
         // define a hash map to contain the links from the actions to the corresponding methods
-        actionMap.put("UP", this::moveUp);
-        actionMap.put("DOWN", this::moveDown);
-        actionMap.put("LEFT", this::moveLeft);
-        actionMap.put("RIGHT", this::moveRight);
+        actionMap.put("U", this::moveUp);
+        actionMap.put("D", this::moveDown);
+        actionMap.put("L", this::moveLeft);
+        actionMap.put("R", this::moveRight);
 
         // start the first round
         nextRound();
@@ -75,13 +75,16 @@ public class JokerServer {
         // start receiving the moves from client. (GameEngine.java, moveMerge())
         DataInputStream inputStream = new DataInputStream(clientSocket.getInputStream());
 
+        DataOutputStream _out = new DataOutputStream(clientSocket.getOutputStream());
+        sendPuzzle(_out);
+
         while (true) {
             char direction = (char) inputStream.read();
             System.out.println(clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction);
 
             moveMerge("" + direction);
             // if nextRound = true then the game is still not over, else the game is over
-            gameOver = !nextRound();
+//            gameOver = !nextRound();
 
             // send the move back to other clients connected
             // assert clientList != null;
@@ -91,9 +94,20 @@ public class JokerServer {
 
                     out.write(direction); // send data to the outputSteam
                     out.flush(); // force to send out the data immediately
+
+                    sendPuzzle(out);
                 }
             }
         }
+    }
+
+    public void sendPuzzle(DataOutputStream out) throws IOException { // handle later
+        out.write('A');              // going to send out an array to client
+        out.writeInt(board.length);     // size of array
+        for(int i : board){
+            out.writeInt(i);            // send the value to the array
+        }
+        out.flush();                    // force java to send the data out
     }
 
     private void moveMerge(String dir) {

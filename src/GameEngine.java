@@ -8,7 +8,7 @@ import java.util.Random;
 
 public class GameEngine {
     // server stuff
-    Thread recieverThread; // child thread for receiving data sent from the server
+    Thread receiverThread; // child thread for receiving data sent from the server
     Socket clientSocket;
     DataInputStream dataInStream;
     DataOutputStream dataOutStream;
@@ -16,7 +16,7 @@ public class GameEngine {
     // game setting
 //    public static final int LIMIT = 14;
     public static final int SIZE = 4;
-//    final int[] board = new int[SIZE * SIZE];
+    final int[] board = new int[SIZE * SIZE];
 //    Random random = new Random(0);
 
     private static GameEngine instance;
@@ -37,17 +37,25 @@ public class GameEngine {
             dataInStream = new DataInputStream(clientSocket.getInputStream());
             dataOutStream = new DataOutputStream(clientSocket.getOutputStream());
 
-            recieverThread = new Thread(() -> {
-                try {
-                    while (true) {
-                        char direction = (char) dataInStream.read();
-                        System.out.println(direction);
+            receiverThread = new Thread(()->{
+                try{
+                    while(true){ // handle it later
+                        char data = (char)dataInStream.read(); // get direction
+                        System.out.println(data);
+                        switch(data){
+                            case 'A': // server sent an array
+                                receiveArray(dataInStream); // use receiveArray to receive dataInputStream
+                                break;
+                            default:
+                                System.out.println(data);
+                        }
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } catch(IOException ex){ // handle it later
+                    ex.printStackTrace();
                 }
             });
-            recieverThread.start();
+
+            receiverThread.start();
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -62,6 +70,13 @@ public class GameEngine {
 
         // start the first round
 //        nextRound();
+    }
+
+    public void receiveArray(DataInputStream in) throws IOException {
+        int size = in.readInt();
+        for(int i = 0; i<size; i++){
+            board[i] = in.readInt();
+        }
     }
 
     public static GameEngine getInstance() {
@@ -209,11 +224,11 @@ public class GameEngine {
 //        }
 //    }
 
-//    public int getValue(int r, int c) {
-//        synchronized (board) {
-//            return board[r * SIZE + c];
-//        }
-//    }
+    public int getValue(int r, int c) {
+        synchronized (board) {
+            return board[r * SIZE + c];
+        }
+    }
 //
 //    public boolean isGameOver() {
 //        return gameOver;

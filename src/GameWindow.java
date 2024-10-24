@@ -87,7 +87,9 @@ public class GameWindow {
     private void initCanvas() {
         canvas.setOnKeyPressed(event -> {
             gameEngine.moveMerge(event.getCode().toString());
-//            scoreLabel.setText("Score: " + gameEngine.getScore());
+            //  please prompt a dialog box to show the problem
+
+            //            scoreLabel.setText("Score: " + gameEngine.getScore());
 //            levelLabel.setText("Level: " + gameEngine.getLevel());
 //            comboLabel.setText("Combo: " + gameEngine.getCombo());
 //            moveCountLabel.setText("# of Moves: " + gameEngine.getMoveCount());
@@ -139,10 +141,10 @@ public class GameWindow {
             for (int j = 0; j < GameEngine.SIZE; j++) {
                 gc.drawImage(images[0], x, y, blockSize, blockSize);  // Draw the background
 
-//                v = gameEngine.getValue(i, j);
+                v = gameEngine.getValue(i, j);
 
-//                if (v > 0)  // if a card is in the place, draw it
-//                    gc.drawImage(images[v], x + padding, y + padding, cardSize, cardSize);
+                if (v > 0)  // if a card is in the place, draw it
+                    gc.drawImage(images[v], x + padding, y + padding, cardSize, cardSize);
 
                 x += blockSize;
             }
