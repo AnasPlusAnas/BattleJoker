@@ -8,7 +8,7 @@ import java.util.Random;
 
 public class GameEngine {
     // server stuff
-    Thread recieverThread;
+    Thread recieverThread; // child thread for receiving data sent from the server
     Socket clientSocket;
     DataInputStream dataInStream;
     DataOutputStream dataOutStream;

@@ -9,7 +9,7 @@ import java.util.Map;
 import java.util.Random;
 
 public class JokerServer {
-    private final ArrayList<Socket> clientList = new ArrayList<>();
+    private final ArrayList<Socket> clientList = new ArrayList<>(); // remember all the client
 
     // game setting
     public static final int LIMIT = 14;
@@ -44,21 +44,21 @@ public class JokerServer {
         nextRound();
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
+            while (true) { // Allow multiple connections
+                Socket clientSocket = serverSocket.accept(); // client successfully connect to the server
                 synchronized (clientList) {
-                    clientList.add(clientSocket);
+                    clientList.add(clientSocket); // add the client socket into the clientList
                 }
 
                 Thread t = new Thread(() -> {
                     try {
-                        serve(clientSocket);
+                        serve(clientSocket); // try if generate exception (client disconnect to the server)
                     } catch (IOException e) {
                         //e.printStackTrace();
                         System.out.println("The connection was dropped by the client! " + clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort());
 
                         synchronized (clientList) {
-                            clientList.remove(clientSocket);
+                            clientList.remove(clientSocket); // remove the client from the socketList
                         }
                     }
                 });
@@ -68,6 +68,7 @@ public class JokerServer {
     }
 
     private void serve(Socket clientSocket) throws IOException {
+        // proof client connect successfully
         print("Established a connection to host %s:%d\n\n",
                 clientSocket.getInetAddress(), clientSocket.getPort());
 
@@ -86,10 +87,10 @@ public class JokerServer {
             // assert clientList != null;
             synchronized (clientList) {
                 for (Socket socket : clientList) {
-                    DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+                    DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from the socket
 
-                    out.write(direction);
-                    out.flush();
+                    out.write(direction); // send data to the outputSteam
+                    out.flush(); // force to send out the data immediately
                 }
             }
         }
