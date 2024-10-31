@@ -10,6 +10,7 @@ import java.util.Random;
 
 public class JokerServer {
     private final ArrayList<Socket> clientList = new ArrayList<>(); // remember all the client
+//    private final ArrayList<> playerList = new ArrayList<>(); // remember all the client
 
     // game setting
     public static final int LIMIT = 14;
@@ -72,8 +73,12 @@ public class JokerServer {
         print("Established a connection to host %s:%d\n\n",
                 clientSocket.getInetAddress(), clientSocket.getPort());
 
+
         // start receiving the moves from client. (GameEngine.java, moveMerge())
         DataInputStream inputStream = new DataInputStream(clientSocket.getInputStream());
+//                 get the playerName sent from the client side
+        playerName = inputStream.readUTF();
+        
 
         DataOutputStream _out = new DataOutputStream(clientSocket.getOutputStream());
         sendPuzzle(_out);

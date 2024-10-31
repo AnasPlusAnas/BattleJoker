@@ -27,9 +27,9 @@ public class GetNameDialog {
     GridPane getNameDialogPane;
 
     Stage stage;
-    String playername;
-    String ip;
-    String port;
+    private String playername;
+    private String ip;
+    private int port;
 
     public GetNameDialog() throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("getNameUI.fxml"));
@@ -54,9 +54,9 @@ public class GetNameDialog {
     void OnButtonClick(Event event) {
         playername = nameField.getText().trim();
         ip = ipField.getText().trim();
-        port = portField.getText().trim();
+        String strPort = portField.getText().trim();
 
-        if (!playername.isEmpty() && !ip.isEmpty() && !port.isEmpty()) {
+        if (!playername.isEmpty() && !ip.isEmpty() && !strPort.isEmpty()) {
             // add regex to check if ip is a valid ipv4 address
             if (!ip.matches("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$")) {
                 errorLabel.setText("Invalid IP address");
@@ -65,9 +65,9 @@ public class GetNameDialog {
 
             // Validate if port is an integer
             try {
-                int portInt = Integer.parseInt(port);
+                port = Integer.parseInt(strPort);
                 // Optionally check if the port is within a valid range (e.g., 1-65535)
-                if (portInt < 1 || portInt > 65535) {
+                if (port < 1 || port > 65535) {
                     errorLabel.setText("Port must be between 1 and 65535.");
                     return;
                 }
@@ -83,5 +83,13 @@ public class GetNameDialog {
 
     public String getPlayername() {
         return playername;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public int getPort() {
+        return port;
     }
 }

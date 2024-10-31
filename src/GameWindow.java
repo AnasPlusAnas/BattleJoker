@@ -1,5 +1,4 @@
 import javafx.animation.AnimationTimer;
-import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -48,10 +47,15 @@ public class GameWindow {
     final String imagePath = "images/";
     final String[] symbols = {"bg", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "Joker"};
     final Image[] images = new Image[symbols.length];
-    final GameEngine gameEngine = GameEngine.getInstance();
+    private final GameEngine gameEngine;
 
-    public GameWindow(Stage stage) throws IOException {
+    public GameWindow(Stage stage, String ip, int port, String playerName) throws IOException {
         loadImages();
+
+        // Initialize GameEngine with the provided IP and port
+        gameEngine = GameEngine.getInstance(ip, port);
+        gameEngine.sendPlayerName(playerName);
+
 
         FXMLLoader loader = new FXMLLoader(getClass().getResource("mainUI.fxml"));
         loader.setController(this);

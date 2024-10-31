@@ -12,8 +12,12 @@ public class BattleJoker extends Application {
     public void start(Stage primaryStage) {
         try {
             GetNameDialog dialog = new GetNameDialog();
-            GameWindow win = new GameWindow(primaryStage);
+            String ip = dialog.getIp();
+            int port = dialog.getPort();
+
+            GameWindow win = new GameWindow(primaryStage, ip, port, dialog.getPlayername());
             win.setName(dialog.getPlayername());
+
             Database.connect();
 
 

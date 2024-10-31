@@ -2,9 +2,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
 
 public class GameEngine {
     // server stuff
@@ -31,47 +28,50 @@ public class GameEngine {
 
 //    private final Map<String, Runnable> actionMap = new HashMap<>();
 
-    private GameEngine() {
+    private GameEngine(String ip, int port) {
         try {
-            clientSocket = new Socket("127.0.0.1", 12345);
+            clientSocket = new Socket(ip, port);
             dataInStream = new DataInputStream(clientSocket.getInputStream());
             dataOutStream = new DataOutputStream(clientSocket.getOutputStream());
 
-            receiverThread = new Thread(()->{
-                try{
-                    while(true){ // handle it later
-                        char data = (char)dataInStream.read(); // get direction
-                        System.out.println(data);
-                        switch(data){
-                            case 'A': // server sent an array
-                                receiveArray(dataInStream); // use receiveArray to receive dataInputStream
-                                break;
-                            default:
-                                System.out.println(data);
-                        }
-                    }
-                } catch(IOException ex){ // handle it later
-                    ex.printStackTrace();
-                }
-            });
-
-            receiverThread.start();
+            startReceiverThread();
 
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1); // should not just exit, maybe show a dialog to the user for more options
         }
-
-//        // define a hash map to contain the links from the actions to the corresponding methods
-//        actionMap.put("UP", this::moveUp);
-//        actionMap.put("DOWN", this::moveDown);
-//        actionMap.put("LEFT", this::moveLeft);
-//        actionMap.put("RIGHT", this::moveRight);
-
-        // start the first round
-//        nextRound();
     }
 
+    public void sendPlayerName(String playerName) {
+        try {
+            dataOutStream.writeUTF(playerName);
+            dataOutStream.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void startReceiverThread() {
+        receiverThread = new Thread(()->{
+            try{
+                while(true){ // handle it later
+                    char data = (char)dataInStream.read(); // get direction
+                    System.out.println(data);
+
+                    switch(data){
+                        case 'A': // server sent an array
+                            receiveArray(dataInStream); // use receiveArray to receive dataInputStream
+                            break;
+                        default:
+                            System.out.println(data);
+                    }
+                }
+            } catch(IOException ex){ // handle it later
+                ex.printStackTrace();
+            }
+        });
+        receiverThread.start();
+    }
     public void receiveArray(DataInputStream in) throws IOException {
         int size = in.readInt();
         for(int i = 0; i<size; i++){
@@ -79,9 +79,10 @@ public class GameEngine {
         }
     }
 
-    public static GameEngine getInstance() {
-        if (instance == null)
-            instance = new GameEngine();
+    public static GameEngine getInstance(String ip, int port) {
+        if (instance == null) {
+            instance = new GameEngine(ip, port);
+        }
         return instance;
     }
 
