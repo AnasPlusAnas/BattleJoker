@@ -9,7 +9,11 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
 import javafx.scene.image.Image;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -40,6 +44,9 @@ public class GameWindow {
 
     @FXML
     Canvas canvas;
+
+    @FXML
+    HBox playerContainer;
 
     Stage stage;
     AnimationTimer animationTimer;
@@ -86,6 +93,15 @@ public class GameWindow {
     private void loadImages() throws IOException {
         for (int i = 0; i < symbols.length; i++)
             images[i] = new Image(Files.newInputStream(Paths.get(imagePath + symbols[i] + ".png")));
+    }
+
+    public void insertPlayer() {
+        VBox container = new VBox();
+        Label name = new Label("Player Name");
+        name.setTextAlignment(TextAlignment.CENTER);
+        name.setFont(Font.font("Impact", 20.0));
+
+        playerContainer.getChildren().add(container);
     }
 
     private void initCanvas() {

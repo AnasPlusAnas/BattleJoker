@@ -1,6 +1,7 @@
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -10,7 +11,9 @@ import java.util.Random;
 
 public class JokerServer {
     private final ArrayList<Socket> clientList = new ArrayList<>(); // remember all the client
-//    private final ArrayList<> playerList = new ArrayList<>(); // remember all the client
+    private final ArrayList<Player> playerList = new ArrayList<>(); // remember all the client
+    // private final ArrayList<> playerList = new ArrayList<>(); // remember all the
+    // client
 
     // game setting
     public static final int LIMIT = 14;
@@ -35,7 +38,8 @@ public class JokerServer {
     }
 
     public JokerServer(int port) throws IOException {
-        // define a hash map to contain the links from the actions to the corresponding methods
+        // define a hash map to contain the links from the actions to the corresponding
+        // methods
         actionMap.put("U", this::moveUp);
         actionMap.put("D", this::moveDown);
         actionMap.put("L", this::moveLeft);
@@ -47,6 +51,7 @@ public class JokerServer {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) { // Allow multiple connections
                 Socket clientSocket = serverSocket.accept(); // client successfully connect to the server
+
                 synchronized (clientList) {
                     clientList.add(clientSocket); // add the client socket into the clientList
                 }
@@ -55,8 +60,9 @@ public class JokerServer {
                     try {
                         serve(clientSocket); // try if generate exception (client disconnect to the server)
                     } catch (IOException e) {
-                        //e.printStackTrace();
-                        System.out.println("The connection was dropped by the client! " + clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort());
+                        // e.printStackTrace();
+                        System.out.println("The connection was dropped by the client! "
+                                + clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort());
 
                         synchronized (clientList) {
                             clientList.remove(clientSocket); // remove the client from the socketList
@@ -73,30 +79,41 @@ public class JokerServer {
         print("Established a connection to host %s:%d\n\n",
                 clientSocket.getInetAddress(), clientSocket.getPort());
 
-
         // start receiving the moves from client. (GameEngine.java, moveMerge())
         DataInputStream inputStream = new DataInputStream(clientSocket.getInputStream());
-//                 get the playerName sent from the client side
+        // get the playerName sent from the client side
         playerName = inputStream.readUTF();
-        
 
+        // create a new player object and add it to the playerList
+        Player player = new Player(playerName, clientSocket);
+
+        // add the player to the playerList
+        synchronized (playerList) {
+            playerList.add(player);
+        }
+
+        // send the puzzle to the client
         DataOutputStream _out = new DataOutputStream(clientSocket.getOutputStream());
         sendPuzzle(_out);
 
+        // TODO::: send out the player list to the client
+        sendPlayerList(_out);
+
         while (true) {
             char direction = (char) inputStream.read();
-            System.out.println(clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction);
+            System.out.println(
+                    clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction);
 
             moveMerge("" + direction);
             // if nextRound = true then the game is still not over, else the game is over
-//            gameOver = !nextRound();
+            // gameOver = !nextRound();
 
             // send the move back to other clients connected
             // assert clientList != null;
             synchronized (clientList) {
                 for (Socket socket : clientList) {
-                    DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from the socket
-
+                    DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
+                                                                                           // the socket
                     out.write(direction); // send data to the outputSteam
                     out.flush(); // force to send out the data immediately
 
@@ -106,13 +123,29 @@ public class JokerServer {
         }
     }
 
-    public void sendPuzzle(DataOutputStream out) throws IOException { // handle later
-        out.write('A');              // going to send out an array to client
-        out.writeInt(board.length);     // size of array
-        for(int i : board){
-            out.writeInt(i);            // send the value to the array
+    private void sendPlayerList(DataOutputStream out) {
+        for (Player player : playerList) {
+            try {
+                out.write('P');
+                out.writeUTF(player.getPlayerName());
+                out.writeInt(player.getLevel());
+                out.writeInt(player.getScore());
+                out.writeInt(player.getCombo());
+                //out.writeInt(player.getNumberOfMoves());
+                out.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        out.flush();                    // force java to send the data out
+    }
+
+    public void sendPuzzle(DataOutputStream out) throws IOException { // handle later
+        out.write('A'); // going to send out an array to client
+        out.writeInt(board.length); // size of array
+        for (int i : board) {
+            out.writeInt(i); // send the value to the array
+        }
+        out.flush(); // force java to send the data out
     }
 
     private void moveMerge(String dir) {
@@ -147,10 +180,12 @@ public class JokerServer {
 
     /**
      * Generate a new random value and determine the game status.
+     * 
      * @return true if the next round can be started, otherwise false.
      */
     private boolean nextRound() {
-        if (isFull()) return false;
+        if (isFull())
+            return false;
         int i;
 
         // randomly find an empty place
@@ -158,7 +193,8 @@ public class JokerServer {
             i = random.nextInt(SIZE * SIZE);
         } while (board[i] > 0);
 
-        // randomly generate a card based on the existing level, and assign it to the select place
+        // randomly generate a card based on the existing level, and assign it to the
+        // select place
         board[i] = random.nextInt(level) / 4 + 1;
         return true;
     }
@@ -168,7 +204,8 @@ public class JokerServer {
      */
     private boolean isFull() {
         for (int v : board)
-            if (v == 0) return false;
+            if (v == 0)
+                return false;
         return true;
     }
 
@@ -205,7 +242,9 @@ public class JokerServer {
     }
 
     /**
-     * Move and merge the values in a specific row or column. The moving direction and the specific row or column is determined by d, s, and l.
+     * Move and merge the values in a specific row or column. The moving direction
+     * and the specific row or column is determined by d, s, and l.
+     * 
      * @param d - move distance
      * @param s - the index of the first element in the row or column
      * @param l - the index of the last element in the row or column.
@@ -214,7 +253,8 @@ public class JokerServer {
         int v, j;
         for (int i = s - d; i != l - d; i -= d) {
             j = i;
-            if (board[j] <= 0) continue;
+            if (board[j] <= 0)
+                continue;
             v = board[j];
             board[j] = 0;
             while (j + d != s && board[j + d] == 0)
@@ -232,7 +272,8 @@ public class JokerServer {
                     combo++;
                 }
                 board[j] = v;
-                if (v > level) level = v;
+                if (v > level)
+                    level = v;
             }
             if (i != j)
                 numOfTilesMoved++;

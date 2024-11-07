@@ -1,7 +1,9 @@
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.net.Socket;
+import java.util.ArrayList;
 
 public class GameEngine {
     // server stuff
@@ -62,6 +64,9 @@ public class GameEngine {
                         case 'A': // server sent an array
                             receiveArray(dataInStream); // use receiveArray to receive dataInputStream
                             break;
+                        case 'P': // server sent arrayList of players
+                            receivePlayerList(dataInStream);
+                            break;
                         default:
                             System.out.println(data);
                     }
@@ -72,6 +77,10 @@ public class GameEngine {
         });
         receiverThread.start();
     }
+
+    public void receivePlayerList(DataInputStream in) throws IOException {
+    }
+
     public void receiveArray(DataInputStream in) throws IOException {
         int size = in.readInt();
         for(int i = 0; i<size; i++){
