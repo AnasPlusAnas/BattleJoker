@@ -118,6 +118,9 @@ public class JokerServer {
         DataOutputStream _out = new DataOutputStream(clientSocket.getOutputStream());
         synchronized (clientList) {
             sendPuzzle(_out);
+        }
+
+        synchronized (playerList) {
             sendPlayerList();
         }
 
@@ -126,19 +129,21 @@ public class JokerServer {
             System.out.println(
                     clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction + "\n*** "+ clientSocket);
 
-            currentPlayer = getCurrentPlayerBySocket(clientSocket);
+            currentPlayer = playerList.stream().filter(p -> p.getSocket() == clientSocket)
+                    .findFirst()
+                    .orElse(null);
 
             if(currentPlayer == null){
                 continue;
             }
 
-            if(Character.toLowerCase(direction) != 'u' &&
-                    Character.toLowerCase(direction) != 'd' &&
-                    Character.toLowerCase(direction) != 'l' &&
-                    Character.toLowerCase(direction) != 'r' &&
-                    Character.toLowerCase(direction) != 'n') { // for undo
-                continue;
-            }
+//            if(Character.toLowerCase(direction) != 'u' &&
+//                    Character.toLowerCase(direction) != 'd' &&
+//                    Character.toLowerCase(direction) != 'l' &&
+//                    Character.toLowerCase(direction) != 'r' &&
+//                    Character.toLowerCase(direction) != 'n') { // for undo
+//                continue;
+//            }
 
 
             if(Character.toLowerCase(direction) == 'n') {
@@ -150,8 +155,6 @@ public class JokerServer {
                 cloneBoard(); // cloned the board before move
                 moveMerge("" + direction);
             }
-
-
 
 
             // if nextRound = true then the game is still not over, else the game is over
@@ -184,7 +187,7 @@ public class JokerServer {
 
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
 
-            out.write('R');
+            out.write('Q');
             byte[] bytes = player.getPlayerName().getBytes();
             out.writeInt(bytes.length);
             out.write(bytes);
@@ -203,7 +206,6 @@ public class JokerServer {
                     p.setCombo(player.getCombo());
                 }
             }
-
             // send the updated player list to all clients
             try {
                 sendPlayerList();

@@ -70,7 +70,7 @@ public class GameEngine {
                         case 'P': // server sent arrayList of players
                             receivePlayerList(dataInStream);
                             break;
-                        case 'R': // server sent remove player
+                        case 'Q': // server sent remove player (Q = quit)
                             // check if the dateInStream is already receiving the data from the server
                             removePlayer(dataInStream);
                             break;
