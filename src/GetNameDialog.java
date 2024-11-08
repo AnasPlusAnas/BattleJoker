@@ -43,6 +43,9 @@ public class GetNameDialog {
         stage.setMinWidth(scene.getWidth());
         stage.setMinHeight(scene.getHeight());
 
+        ipField.setText("127.0.0.1");
+        portField.setText("1234");
+
         getNameDialogPane.setPadding(new Insets(10, 10, 10, 10));
 
         goButton.setOnMouseClicked(this::OnButtonClick);
@@ -53,6 +56,7 @@ public class GetNameDialog {
     @FXML
     void OnButtonClick(Event event) {
         playername = nameField.getText().trim();
+
         ip = ipField.getText().trim();
         String strPort = portField.getText().trim();
 

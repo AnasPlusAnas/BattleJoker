@@ -13,16 +13,14 @@ public class Player implements Serializable {
     private boolean undoFlag;
 
 
-    public Player(String playerName, Socket socket) {
+    public Player(String playerName, Socket socket, int level, int score, int numberOfMoves, int combo) {
         this.playerName = playerName;
         this.socket = socket;
-        this.level = 1;
-        this.score = 0;
-        this.numberOfMoves = 0;
-        this.combo = 0;
-        this.undoFlag = true;
-
-    }
+        this.level = level;
+        this.score = score;
+        this.numberOfMoves = numberOfMoves;
+        this.combo = combo;
+this.undoFlag = true;    }
 
 
     public int getLevel() {

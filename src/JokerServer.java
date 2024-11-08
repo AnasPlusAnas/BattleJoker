@@ -1,7 +1,7 @@
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -12,9 +12,8 @@ import java.util.Random;
 public class JokerServer {
     private final ArrayList<Socket> clientList = new ArrayList<>(); // remember all the client
     private final ArrayList<Player> playerList = new ArrayList<>(); // remember all the client
-    // private final ArrayList<> playerList = new ArrayList<>(); // remember all the
-    // client
 
+    // client
     // game setting
     public static final int LIMIT = 14;
     public static final int SIZE = 4;
@@ -70,6 +69,20 @@ public class JokerServer {
 
                         synchronized (clientList) {
                             clientList.remove(clientSocket); // remove the client from the socketList
+
+                            Player playerToRemove = playerList.stream().filter(p -> p.getSocket() == clientSocket)
+                                    .findFirst()
+                                    .orElse(null);
+
+                            synchronized (playerList) {
+                                playerList.remove(playerToRemove);
+
+                                try {
+                                    sendRemovedPlayer(playerToRemove);
+                                } catch (IOException ex) {
+                                    throw new RuntimeException(ex);
+                                }
+                            }
                         }
                     }
                 });
@@ -84,12 +97,16 @@ public class JokerServer {
                 clientSocket.getInetAddress(), clientSocket.getPort());
 
         // start receiving the moves from client. (GameEngine.java, moveMerge())
-        DataInputStream inputStream = new DataInputStream(clientSocket.getInputStream());
-        // get the playerName sent from the client side
-        playerName = inputStream.readUTF();
+        BufferedInputStream bufferedInputStream = new BufferedInputStream(clientSocket.getInputStream());
+        DataInputStream inputStream = new DataInputStream(bufferedInputStream);
+        // client side sends array of bytes, so we need to read the array of bytes and
+        // convert it to string
+        byte[] bytes = new byte[1024];
+        int len = inputStream.read(bytes);
+        String playerName = new String(bytes, 0, len);
 
         // create a new player object and add it to the playerList
-        Player player = new Player(playerName, clientSocket);
+        Player player = new Player(playerName, clientSocket, 0, 0, 0, 0);
 
         // add the player to the playerList
         synchronized (playerList) {
@@ -99,10 +116,10 @@ public class JokerServer {
 
         // send out the updated version of puzzle board  to the client
         DataOutputStream _out = new DataOutputStream(clientSocket.getOutputStream());
-        sendPuzzle(_out);
-
-        // TODO::: send out the player list to the client
-        sendPlayerList(_out);
+        synchronized (clientList) {
+            sendPuzzle(_out);
+            sendPlayerList();
+        }
 
         while (true) {
             char direction = (char) inputStream.read();
@@ -140,6 +157,9 @@ public class JokerServer {
             // if nextRound = true then the game is still not over, else the game is over
             // gameOver = !nextRound();
 
+            // update the player stats
+            player.setNumberOfMoves(player.getNumberOfMoves() + 1);
+
             // send the move back to other clients connected
             // assert clientList != null;
             synchronized (clientList) {
@@ -153,30 +173,63 @@ public class JokerServer {
                 }
             }
 
+            updatePlayerStat(player);
         }
     }
 
-    private Player getCurrentPlayerBySocket(Socket currentSocket){
-        for (Player player : playerList){
-            if(player.getSocket().equals(currentSocket)){
-                return player;
+    private void sendRemovedPlayer(Player player) throws IOException {
+        for (Socket client : clientList) {
+            System.out.println("JokerServer.sendRemovedPlayer");
+            System.out.println("player = " + player.getPlayerName());
+
+            DataOutputStream out = new DataOutputStream(client.getOutputStream());
+
+            out.write('R');
+            byte[] bytes = player.getPlayerName().getBytes();
+            out.writeInt(bytes.length);
+            out.write(bytes);
+
+            out.flush();
+        }
+    }
+
+    private void updatePlayerStat(Player player) {
+        synchronized (playerList) {
+            for (Player p : playerList) {
+                if (p.getPlayerName().equals(player.getPlayerName())) {
+                    p.setLevel(player.getLevel());
+                    p.setScore(player.getScore());
+                    p.setNumberOfMoves(player.getNumberOfMoves());
+                    p.setCombo(player.getCombo());
+                }
+            }
+
+            // send the updated player list to all clients
+            try {
+                sendPlayerList();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
-        return null;
     }
 
-    private void sendPlayerList(DataOutputStream out) {
-        for (Player player : playerList) {
-            try {
+    private void sendPlayerList() throws IOException {
+        for (Socket client : clientList) {
+            System.out.println("JokerServer.sendPlayerList");
+
+            DataOutputStream out = new DataOutputStream(client.getOutputStream());
+
+            for (Player player : playerList) {
                 out.write('P');
-                out.writeUTF(player.getPlayerName());
+                byte[] bytes = player.getPlayerName().getBytes();
+                out.writeInt(bytes.length);
+                out.write(bytes);
+
                 out.writeInt(player.getLevel());
                 out.writeInt(player.getScore());
                 out.writeInt(player.getCombo());
-                //out.writeInt(player.getNumberOfMoves());
+                out.writeInt(player.getNumberOfMoves());
                 out.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
             }
         }
     }
@@ -196,6 +249,11 @@ public class JokerServer {
             out.writeInt(i); // send the value to the array
         }
         out.flush(); // force java to send the data out
+        // try {
+        // Thread.sleep(1000);
+        // } catch (InterruptedException e) {
+        // throw new RuntimeException(e);
+        // }
     }
 
     private void moveMerge(String dir) {
