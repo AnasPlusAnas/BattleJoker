@@ -30,7 +30,9 @@ public class JokerServer {
     private int combo;
     private int totalMoveCount;
     private int numOfTilesMoved;
+    private Player currentPlayer = null;
 
+    final int[] clonedBoard = new int[SIZE * SIZE]; // for undo method
     private final Map<String, Runnable> actionMap = new HashMap<>();
 
     public void print(String str, Object... o) {
@@ -54,6 +56,8 @@ public class JokerServer {
 
                 synchronized (clientList) {
                     clientList.add(clientSocket); // add the client socket into the clientList
+                    System.out.println("clientSocket:" + clientSocket.toString());
+                    System.out.println("clientSocket:" + clientSocket.toString());
                 }
 
                 Thread t = new Thread(() -> {
@@ -92,7 +96,8 @@ public class JokerServer {
             playerList.add(player);
         }
 
-        // send the puzzle to the client
+
+        // send out the updated version of puzzle board  to the client
         DataOutputStream _out = new DataOutputStream(clientSocket.getOutputStream());
         sendPuzzle(_out);
 
@@ -102,9 +107,36 @@ public class JokerServer {
         while (true) {
             char direction = (char) inputStream.read();
             System.out.println(
-                    clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction);
+                    clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction + "\n*** "+ clientSocket);
 
-            moveMerge("" + direction);
+            currentPlayer = getCurrentPlayerBySocket(clientSocket);
+
+            if(currentPlayer == null){
+                continue;
+            }
+
+            if(Character.toLowerCase(direction) != 'u' &&
+                    Character.toLowerCase(direction) != 'd' &&
+                    Character.toLowerCase(direction) != 'l' &&
+                    Character.toLowerCase(direction) != 'r' &&
+                    Character.toLowerCase(direction) != 'n') { // for undo
+                continue;
+            }
+
+
+            if(Character.toLowerCase(direction) == 'n') {
+                if(currentPlayer.getUndoFlag()) {
+                    undoPuzzle();
+                    currentPlayer.setUndoFlag(false);
+                }
+            } else{
+                cloneBoard(); // cloned the board before move
+                moveMerge("" + direction);
+            }
+
+
+
+
             // if nextRound = true then the game is still not over, else the game is over
             // gameOver = !nextRound();
 
@@ -120,7 +152,17 @@ public class JokerServer {
                     sendPuzzle(out);
                 }
             }
+
         }
+    }
+
+    private Player getCurrentPlayerBySocket(Socket currentSocket){
+        for (Player player : playerList){
+            if(player.getSocket().equals(currentSocket)){
+                return player;
+            }
+        }
+        return null;
     }
 
     private void sendPlayerList(DataOutputStream out) {
@@ -139,6 +181,14 @@ public class JokerServer {
         }
     }
 
+    public void undoPuzzle(){
+        //board = clonedBoard.clone();
+        System.arraycopy(clonedBoard,0,board,0, board.length);
+    }
+    public void cloneBoard(){
+        //clonedBoard = board.clone();
+        System.arraycopy(board,0,clonedBoard,0, board.length);
+    }
     public void sendPuzzle(DataOutputStream out) throws IOException { // handle later
         out.write('A'); // going to send out an array to client
         out.writeInt(board.length); // size of array

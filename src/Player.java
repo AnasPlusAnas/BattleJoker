@@ -3,12 +3,15 @@ import java.net.Socket;
 
 public class Player implements Serializable {
 
+
     private int level;
     private int score;
     private int combo;
     private String playerName;
     private int numberOfMoves;
     private Socket socket;
+    private boolean undoFlag;
+
 
     public Player(String playerName, Socket socket) {
         this.playerName = playerName;
@@ -17,7 +20,10 @@ public class Player implements Serializable {
         this.score = 0;
         this.numberOfMoves = 0;
         this.combo = 0;
+        this.undoFlag = true;
+
     }
+
 
     public int getLevel() {
         return level;
@@ -58,4 +64,13 @@ public class Player implements Serializable {
     public Socket getSocket() {
         return socket;
     }
+
+    public boolean getUndoFlag(){
+        return undoFlag;
+    }
+
+    public void setUndoFlag(boolean undoFlag){
+        this.undoFlag = undoFlag;
+    }
+
 }
