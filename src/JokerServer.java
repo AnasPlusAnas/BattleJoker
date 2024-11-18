@@ -19,6 +19,7 @@ public class JokerServer {
 
     private static GameEngine instance;
     private boolean gameOver;
+    private final int MAX_MOVES = 4;
 
     private String playerName;
     private int level = 1;
@@ -71,10 +72,25 @@ public class JokerServer {
                                     .orElse(null);
 
                             synchronized (playerList) {
+                                // Check if the player to remove is the current player
+                                boolean isCurrentPlayer = currentPlayer.equals(playerToRemove);
+
+                                // Remove the player from the list
                                 playerList.remove(playerToRemove);
 
                                 try {
                                     sendRemovedPlayer(playerToRemove);
+                                } catch (IOException ex) {
+                                    throw new RuntimeException(ex);
+                                }
+
+                                // If the removed player is the current player, select a new current player
+                                if (isCurrentPlayer && !playerList.isEmpty()) {
+                                    assignNewCurrentPlayer();
+                                }
+
+                                try {
+                                    sendPlayerList();
                                 } catch (IOException ex) {
                                     throw new RuntimeException(ex);
                                 }
@@ -107,7 +123,15 @@ public class JokerServer {
         // add the player to the playerList
         synchronized (playerList) {
             playerList.add(player);
+
+            // if its the first player, the player who started the game, he gets to play first.
+            if (playerList.size() == 1) {
+                player.setMyTurn(true);
+                currentPlayer = player;
+            }
         }
+
+
 
         // send out the updated version of puzzle board to the client
         DataOutputStream _out = new DataOutputStream(clientSocket.getOutputStream());
@@ -125,23 +149,6 @@ public class JokerServer {
                     clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction
                             + "\n*** " + clientSocket);
 
-            //
-            // if (currentPlayer == null) {
-            // continue;
-            // }
-
-            // if(Character.toLowerCase(direction) != 'u' &&
-            // Character.toLowerCase(direction) != 'd' &&
-            // Character.toLowerCase(direction) != 'l' &&
-            // Character.toLowerCase(direction) != 'r' &&
-            // Character.toLowerCase(direction) != 'n') { // for undo
-            // continue;
-            // }
-
-            currentPlayer = playerList.stream().filter(p -> p.getSocket() == clientSocket)
-                    .findFirst()
-                    .orElse(null);
-
             if (Character.toLowerCase(direction) == 'n') {
                 if (currentPlayer.getUndoFlag()) {
                     undoPuzzle();
@@ -153,7 +160,7 @@ public class JokerServer {
             }
 
             // if nextRound = true then the game is still not over, else the game is over
-            gameOver = !nextRound();
+            //gameOver = !nextRound();
 
             // send the move back to other clients connected
             // assert clientList != null;
@@ -168,7 +175,7 @@ public class JokerServer {
                 }
             }
 
-            updatePlayerStat(player);
+            //updatePlayerStat(player);
         }
     }
 
@@ -223,6 +230,7 @@ public class JokerServer {
                 out.writeInt(player.getScore());
                 out.writeInt(player.getCombo());
                 out.writeInt(player.getNumberOfMoves());
+                out.writeBoolean(player.isMyTurn());
                 out.flush();
             }
         }
@@ -273,14 +281,30 @@ public class JokerServer {
 
                 // calculate the new score
                 score += combo / 5 * 2;
-                int playerScore = currentPlayer.getScore();
-                int playerCombo = currentPlayer.getCombo();
-                currentPlayer.setScore(playerScore += playerCombo / 5 * 2);
+                currentPlayer.setScore(score);
+//                int playerScore = currentPlayer.getScore();
+//                int playerCombo = currentPlayer.getCombo();
+//                currentPlayer.setScore(playerScore += playerCombo / 5 * 2);
 
                 // determine whether the game is over or not
                 if (numOfTilesMoved > 0) {
                     totalMoveCount++;
                     currentPlayer.setNumberOfMoves(currentPlayer.getNumberOfMoves() + 1);
+                    // Once the current player's moves reach MAX_MOVES, reset the count for the next player.
+                    if (totalMoveCount == MAX_MOVES) {
+                        totalMoveCount = 0;
+                        // If the player is playing alone, no need to change turns
+                        if (playerList.size() > 1) {
+                            assignNewCurrentPlayer();
+                        }
+                    }
+
+                    try {
+                        sendPlayerList();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
                     gameOver = level == LIMIT || !nextRound();
                 } else
                     gameOver = isFull();
@@ -295,6 +319,11 @@ public class JokerServer {
                         }
                         Database.putScore(player.getPlayerName(), player.getScore(), player.getLevel());
                         sendGameOver();
+                        for (Player p :
+                                playerList) {
+                            p.setMyTurn(false);
+                        }
+                        sendPlayerList();
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
@@ -302,6 +331,23 @@ public class JokerServer {
 
             }
         }
+    }
+
+    // Method to assign a new current player randomly
+    private void assignNewCurrentPlayer() {
+        currentPlayer.setMyTurn(false);
+
+        // Randomly select a new player
+        int nextPlayerIndex;
+
+        do {
+            nextPlayerIndex = random.nextInt(playerList.size());
+        } while (playerList.get(nextPlayerIndex) == currentPlayer); // Ensure it's not the current player
+
+        currentPlayer = playerList.get(nextPlayerIndex); // Set the next player
+        currentPlayer.setMyTurn(true); // Set their turn
+        score = currentPlayer.getScore();
+        combo = currentPlayer.getCombo();
     }
 
     /**
@@ -399,7 +445,8 @@ public class JokerServer {
 
                     score = currentPlayer.getScore() + 1;
                     combo = currentPlayer.getCombo() + 1;
-
+                    currentPlayer.setScore(score);
+                    currentPlayer.setCombo(combo);
                     // score++;
                     // combo++;
                 }
@@ -410,8 +457,7 @@ public class JokerServer {
             if (i != j)
                 numOfTilesMoved++;
 
-            currentPlayer.setScore(score);
-            currentPlayer.setCombo(combo);
+
         }
     }
 

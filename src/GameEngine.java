@@ -12,6 +12,10 @@ public class GameEngine {
     DataOutputStream dataOutStream;
     ArrayList<Player> playersList = new ArrayList<>();
 
+    Player selfPlayer = null;
+
+    private String myName = "";
+
     // game setting
     // public static final int LIMIT = 14;
     public static final int SIZE = 4;
@@ -47,6 +51,7 @@ public class GameEngine {
 
     public void sendPlayerName(String playerName) {
         try {
+            myName = playerName;
             // send array bytes not UTF as it can be a problem
             byte[] bytes = playerName.getBytes();
             dataOutStream.write(bytes);
@@ -127,6 +132,7 @@ public class GameEngine {
             int score = in.readInt();
             int combo = in.readInt();
             int numberOfMoves = in.readInt();
+            boolean isMyTurn = in.readBoolean();
 
             System.out.println("GameEngine.receivePlayerList");
             System.out.println("playerName = " + playerName);
@@ -134,9 +140,12 @@ public class GameEngine {
             System.out.println("score = " + score);
             System.out.println("combo = " + combo);
             System.out.println("numberOfMoves = " + numberOfMoves);
+            System.out.println("isMyTurn = " + isMyTurn);
 
-            Player player = new Player(playerName, null, level, score, numberOfMoves, combo);
-            playersList.add(player);
+//            Player player = new Player(playerName, null, level, score, numberOfMoves, combo);
+//            player.setMyTurn(isMyTurn);
+//            playersList.add(player);
+            Player player = addOrUpdatePlayer(playerName, isMyTurn, level, score, numberOfMoves, combo);
 
             GameWindow win = null;
             while (win == null) {
@@ -144,9 +153,34 @@ public class GameEngine {
                 win = GameWindow.getInstance();
             }
             win.insertPlayerStat(player);
+
+            if (playerName.equals(myName)) {
+
+            }
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    public Player addOrUpdatePlayer(String playerName, boolean isMyTurn, int level, int score, int numberOfMoves, int combo) {
+        // Loop through the players list to find the player
+        for (Player existingPlayer : playersList) {
+            if (existingPlayer.getPlayerName().equals(playerName)) {
+                // Player found, update their attributes
+                existingPlayer.setMyTurn(isMyTurn);
+                existingPlayer.setLevel(level);
+                existingPlayer.setScore(score);
+                existingPlayer.setNumberOfMoves(numberOfMoves);
+                existingPlayer.setCombo(combo);
+                return existingPlayer; // Exit the method after updating
+            }
+        }
+
+        // If the player does not exist, create and add the new player
+        Player player = new Player(playerName, null, level, score, numberOfMoves, combo);
+        player.setMyTurn(isMyTurn);
+        playersList.add(player);
+        return player;
     }
 
     public void receiveArray(DataInputStream in) throws IOException {
@@ -198,6 +232,13 @@ public class GameEngine {
      */
     public void moveMerge(String dir) {
         System.out.println(dir);
+
+        Player self = playersList.stream().filter(p -> p.getPlayerName().equals(myName)).findFirst().get();
+
+        if (!self.isMyTurn()) {
+            System.out.println("GameEngine.moveMerge:: IS MY TURN == false");
+            return;
+        }
 
         // send the data to the server
         try {

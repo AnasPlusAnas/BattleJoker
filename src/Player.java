@@ -12,6 +12,8 @@ public class Player implements Serializable {
     private Socket socket;
     private boolean undoFlag;
 
+    private boolean isMyTurn;
+
 
     public Player(String playerName, Socket socket, int level, int score, int numberOfMoves, int combo) {
         this.playerName = playerName;
@@ -22,6 +24,13 @@ public class Player implements Serializable {
         this.combo = combo;
 this.undoFlag = true;    }
 
+    public boolean isMyTurn() {
+        return isMyTurn;
+    }
+
+    public void setMyTurn(boolean myTurn) {
+        isMyTurn = myTurn;
+    }
 
     public int getLevel() {
         return level;
