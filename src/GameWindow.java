@@ -24,39 +24,30 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class GameWindow {
-    @FXML
-    MenuBar menuBar;
-
-    @FXML
-    Label scoreLabel;
-
-    @FXML
-    Label levelLabel;
-
-    @FXML
-    Label comboLabel;
-
-    @FXML
-    Label moveCountLabel;
-
-    @FXML
-    Pane boardPane;
-
-    @FXML
-    Canvas canvas;
-
-    @FXML
-    HBox playerContainer;
-
     private static GameWindow instance;
-
-    Stage stage;
-    AnimationTimer animationTimer;
-
     final String imagePath = "images/";
-    final String[] symbols = { "bg", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "Joker" };
+    final String[] symbols = {"bg", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "Joker"};
     final Image[] images = new Image[symbols.length];
     private final GameEngine gameEngine;
+    @FXML
+    MenuBar menuBar;
+    @FXML
+    Label scoreLabel;
+    @FXML
+    Label levelLabel;
+    @FXML
+    Label comboLabel;
+    @FXML
+    Label moveCountLabel;
+    @FXML
+    Pane boardPane;
+    @FXML
+    Canvas canvas;
+    @FXML
+    HBox playerContainer;
+    Stage stage;
+    AnimationTimer animationTimer;
+    private boolean isGameOver;
 
     private GameWindow(Stage stage, String ip, int port, String playerName) throws IOException {
         loadImages();
@@ -100,6 +91,10 @@ public class GameWindow {
             return null;
         }
         return instance;
+    }
+
+    public void setIsGameOver(boolean isOver) {
+        isGameOver = isOver;
     }
 
     private void gameStart() {
@@ -223,19 +218,19 @@ public class GameWindow {
             @Override
             public void handle(long now) {
                 render();
-                // if (gameEngine.isGameOver()) {
-                // System.out.println("Game Over!");
-                // animationTimer.stop();
-                //
-                // Platform.runLater(() -> {
-                // try {
-                // new ScoreboardWindow();
-                // } catch (IOException ex) {
-                // throw new RuntimeException(ex);
-                // }
-                // });
-                //
-                // }
+                if (isGameOver) {
+                    System.out.println("Game Over!");
+                    animationTimer.stop();
+
+                    Platform.runLater(() -> {
+                        try {
+                            new ScoreboardWindow();
+                        } catch (IOException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    });
+
+                }
             }
         };
         canvas.requestFocus();

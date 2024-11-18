@@ -74,12 +74,23 @@ public class GameEngine {
                             // check if the dateInStream is already receiving the data from the server
                             removePlayer(dataInStream);
                             break;
+                        case 'F': // game is finished
+                            System.out.println("GameEngine.startReceiverThread::GameOver");
+                            GameWindow win = null;
+                            while (win == null) {
+                                Thread.sleep(100);
+                                win = GameWindow.getInstance();
+                            }
+                            win.setIsGameOver(true);
+                            break;
                         default:
                             System.out.println(data);
                     }
                 }
             } catch (IOException ex) { // handle it later
                 ex.printStackTrace();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         });
         receiverThread.start();

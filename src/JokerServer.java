@@ -4,10 +4,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class JokerServer {
     private final ArrayList<Socket> clientList = new ArrayList<>(); // remember all the client
@@ -55,7 +52,6 @@ public class JokerServer {
 
                 synchronized (clientList) {
                     clientList.add(clientSocket); // add the client socket into the clientList
-                    System.out.println("clientSocket:" + clientSocket.toString());
                     System.out.println("clientSocket:" + clientSocket.toString());
                 }
 
@@ -113,8 +109,7 @@ public class JokerServer {
             playerList.add(player);
         }
 
-
-        // send out the updated version of puzzle board  to the client
+        // send out the updated version of puzzle board to the client
         DataOutputStream _out = new DataOutputStream(clientSocket.getOutputStream());
         synchronized (clientList) {
             sendPuzzle(_out);
@@ -127,41 +122,38 @@ public class JokerServer {
         while (true) {
             char direction = (char) inputStream.read();
             System.out.println(
-                    clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction + "\n*** "+ clientSocket);
+                    clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction
+                            + "\n*** " + clientSocket);
+
+            //
+            // if (currentPlayer == null) {
+            // continue;
+            // }
+
+            // if(Character.toLowerCase(direction) != 'u' &&
+            // Character.toLowerCase(direction) != 'd' &&
+            // Character.toLowerCase(direction) != 'l' &&
+            // Character.toLowerCase(direction) != 'r' &&
+            // Character.toLowerCase(direction) != 'n') { // for undo
+            // continue;
+            // }
 
             currentPlayer = playerList.stream().filter(p -> p.getSocket() == clientSocket)
                     .findFirst()
                     .orElse(null);
 
-            if(currentPlayer == null){
-                continue;
-            }
-
-//            if(Character.toLowerCase(direction) != 'u' &&
-//                    Character.toLowerCase(direction) != 'd' &&
-//                    Character.toLowerCase(direction) != 'l' &&
-//                    Character.toLowerCase(direction) != 'r' &&
-//                    Character.toLowerCase(direction) != 'n') { // for undo
-//                continue;
-//            }
-
-
-            if(Character.toLowerCase(direction) == 'n') {
-                if(currentPlayer.getUndoFlag()) {
+            if (Character.toLowerCase(direction) == 'n') {
+                if (currentPlayer.getUndoFlag()) {
                     undoPuzzle();
                     currentPlayer.setUndoFlag(false);
                 }
-            } else{
+            } else {
                 cloneBoard(); // cloned the board before move
                 moveMerge("" + direction);
             }
 
-
             // if nextRound = true then the game is still not over, else the game is over
-            // gameOver = !nextRound();
-
-            // update the player stats
-            player.setNumberOfMoves(player.getNumberOfMoves() + 1);
+            gameOver = !nextRound();
 
             // send the move back to other clients connected
             // assert clientList != null;
@@ -236,14 +228,26 @@ public class JokerServer {
         }
     }
 
-    public void undoPuzzle(){
-        //board = clonedBoard.clone();
-        System.arraycopy(clonedBoard,0,board,0, board.length);
+    private void sendGameOver() throws IOException {
+        for (Socket client : clientList) {
+            System.out.println("JokerServer.sendGameOver");
+
+            DataOutputStream out = new DataOutputStream(client.getOutputStream());
+            out.write('F');
+            out.flush();
+        }
     }
-    public void cloneBoard(){
-        //clonedBoard = board.clone();
-        System.arraycopy(board,0,clonedBoard,0, board.length);
+
+    public void undoPuzzle() {
+        // board = clonedBoard.clone();
+        System.arraycopy(clonedBoard, 0, board, 0, board.length);
     }
+
+    public void cloneBoard() {
+        // clonedBoard = board.clone();
+        System.arraycopy(board, 0, clonedBoard, 0, board.length);
+    }
+
     public void sendPuzzle(DataOutputStream out) throws IOException { // handle later
         out.write('A'); // going to send out an array to client
         out.writeInt(board.length); // size of array
@@ -262,16 +266,21 @@ public class JokerServer {
         synchronized (board) {
             if (actionMap.containsKey(dir)) {
                 combo = numOfTilesMoved = 0;
+                currentPlayer.setCombo(combo);
 
                 // go to the hash map, find the corresponding method and call it
                 actionMap.get(dir).run();
 
                 // calculate the new score
                 score += combo / 5 * 2;
+                int playerScore = currentPlayer.getScore();
+                int playerCombo = currentPlayer.getCombo();
+                currentPlayer.setScore(playerScore += playerCombo / 5 * 2);
 
                 // determine whether the game is over or not
                 if (numOfTilesMoved > 0) {
                     totalMoveCount++;
+                    currentPlayer.setNumberOfMoves(currentPlayer.getNumberOfMoves() + 1);
                     gameOver = level == LIMIT || !nextRound();
                 } else
                     gameOver = isFull();
@@ -279,11 +288,18 @@ public class JokerServer {
                 // update the database if the game is over
                 if (gameOver) {
                     try {
-                        Database.putScore(playerName, score, level);
+                        // get the player with the highest score
+                        Player player = playerList.stream().max(Comparator.comparingInt(Player::getScore)).get();
+                        if (player == null) {
+                            throw new Exception("Cannot find player to update database");
+                        }
+                        Database.putScore(player.getPlayerName(), player.getScore(), player.getLevel());
+                        sendGameOver();
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
                 }
+
             }
         }
     }
@@ -378,8 +394,14 @@ public class JokerServer {
                     j += d;
                     board[j] = 0;
                     v++;
-                    score++;
-                    combo++;
+                    // get the currentPlayer score and combo and update score and combo to the
+                    // currentPlayer first then update the count
+
+                    score = currentPlayer.getScore() + 1;
+                    combo = currentPlayer.getCombo() + 1;
+
+                    // score++;
+                    // combo++;
                 }
                 board[j] = v;
                 if (v > level)
@@ -388,6 +410,8 @@ public class JokerServer {
             if (i != j)
                 numOfTilesMoved++;
 
+            currentPlayer.setScore(score);
+            currentPlayer.setCombo(combo);
         }
     }
 

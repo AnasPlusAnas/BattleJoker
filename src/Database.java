@@ -36,9 +36,16 @@ public class Database {
     }
 
     public static void putScore(String name, int score, int level) throws SQLException {
-        String sql = String.format("INSERT INTO scores ('name', 'score', 'level', 'time') VALUES ('%s', %d, %d, datetime('now'))", name, score, level);
-        Statement statement = conn.createStatement();
-        statement.execute(sql);
+        try {
+            connect();
+            String sql = String.format("INSERT INTO scores ('name', 'score', 'level', 'time') VALUES ('%s', %d, %d, datetime('now'))", name, score, level);
+            Statement statement = conn.createStatement();
+            statement.execute(sql);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) throws SQLException, ClassNotFoundException {
