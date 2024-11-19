@@ -32,14 +32,6 @@ public class GameWindow {
     @FXML
     MenuBar menuBar;
     @FXML
-    Label scoreLabel;
-    @FXML
-    Label levelLabel;
-    @FXML
-    Label comboLabel;
-    @FXML
-    Label moveCountLabel;
-    @FXML
     Pane boardPane;
     @FXML
     Canvas canvas;
@@ -150,6 +142,7 @@ public class GameWindow {
                     if (moveCountLabel != null) {
                         moveCountLabel.setText("# of Moves: " + player.getNumberOfMoves());
                     }
+                    updatePlayerTurn(player);
 
                     return; // Player found and updated, exit method
                 }
@@ -183,6 +176,8 @@ public class GameWindow {
             statContainer.setPadding(new Insets(10.0, 10.0, 10.0, 10.0));
 
             playerContainer.getChildren().add(statContainer);
+
+            updatePlayerTurn(player);
         });
     }
 
@@ -203,10 +198,56 @@ public class GameWindow {
         }
     }
 
+    public void updatePlayerTurn(Player player) {
+        Platform.runLater(() -> {
+            for (int i = 0; i < playerContainer.getChildren().size(); i++) {
+                VBox statContainer = (VBox) playerContainer.getChildren().get(i);
+
+                // Find all relevant labels in the statContainer
+                for (Node child : statContainer.getChildren()) {
+                    if (child instanceof Label) {
+                        Label label = (Label) child;
+                        if (label.getText().equals(player.getPlayerName())) {
+                            // remove the child from the parent
+                            if (player.isMyTurn()) {
+                                // Highlight this player's turn
+                                label.setStyle("-fx-font-weight: bold; -fx-text-fill: green;"); // Example style for current player
+                            } else {
+                                // Reset style for other players
+                                label.setStyle("-fx-font-weight: normal; -fx-text-fill: black;");
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     private void initCanvas() {
         canvas.setOnKeyPressed(event -> {
-            gameEngine.moveMerge(event.getCode().toString());
-            // please prompt a dialog box to show the problem
+            switch (event.getCode()) {
+                case UP:
+                    gameEngine.moveMerge("UP");
+                    break;
+                case DOWN:
+                    gameEngine.moveMerge("DOWN");
+                    break;
+                case LEFT:
+                    gameEngine.moveMerge("LEFT");
+                    break;
+                case RIGHT:
+                    gameEngine.moveMerge("RIGHT");
+                    break;
+                case A:
+                    HowToPlayWindow howToPlayWindow = new HowToPlayWindow();
+                    try {
+                        howToPlayWindow.show();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    break;
+            }
+            //gameEngine.moveMerge(event.getCode().toString());
 
             // scoreLabel.setText("Score: " + gameEngine.getScore());
             // levelLabel.setText("Level: " + gameEngine.getLevel());
@@ -229,8 +270,9 @@ public class GameWindow {
                             throw new RuntimeException(ex);
                         }
                     });
-
                 }
+
+                //updatePlayerTurn();
             }
         };
         canvas.requestFocus();

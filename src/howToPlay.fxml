@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml" prefWidth="400" prefHeight="300">
+    <Label text="How to Play" layoutX="150" layoutY="20" textAlignment="CENTER">
+        <font>
+            <Font size="24"/>
+        </font>
+    </Label>
+
+    <Text layoutX="20" layoutY="70" wrappingWidth="360">
+        Use the arrow keys to navigate the game:
+    </Text>
+
+    <ImageView layoutX="50" layoutY="100" fitWidth="300" fitHeight="100">
+        <Image url="@images/allArrowKeys.png"/>
+    </ImageView>
+</AnchorPane>

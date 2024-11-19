@@ -2,28 +2,23 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
 
 public class GameEngine {
+    // game setting
+    // public static final int LIMIT = 14;
+    public static final int SIZE = 4;
+    private static GameEngine instance;
+    private static GameWindow gameWindow;
+    final int[] board = new int[SIZE * SIZE];
+//    ArrayList<Player> playersList = new ArrayList<>();
     // server stuff
     Thread receiverThread; // child thread for receiving data sent from the server
     Socket clientSocket;
     DataInputStream dataInStream;
     DataOutputStream dataOutStream;
-    ArrayList<Player> playersList = new ArrayList<>();
-
-    Player selfPlayer = null;
-
-    private String myName = "";
-
-    // game setting
-    // public static final int LIMIT = 14;
-    public static final int SIZE = 4;
-    final int[] board = new int[SIZE * SIZE];
     // Random random = new Random(0);
-
-    private static GameEngine instance;
-    private static GameWindow gameWindow;
+    Player self = null;
+    private String myName = "";
     // private boolean gameOver;
 
     // private String playerName;
@@ -47,6 +42,13 @@ public class GameEngine {
             e.printStackTrace();
             System.exit(-1); // should not just exit, maybe show a dialog to the user for more options
         }
+    }
+
+    public static GameEngine getInstance(String ip, int port) {
+        if (instance == null) {
+            instance = new GameEngine(ip, port);
+        }
+        return instance;
     }
 
     public void sendPlayerName(String playerName) {
@@ -121,6 +123,27 @@ public class GameEngine {
         }
     }
 
+//    public Player addOrUpdatePlayer(String playerName, boolean isMyTurn, int level, int score, int numberOfMoves, int combo) {
+//        // Loop through the players list to find the player
+//        for (Player existingPlayer : playersList) {
+//            if (existingPlayer.getPlayerName().equals(playerName)) {
+//                // Player found, update their attributes
+//                existingPlayer.setMyTurn(isMyTurn);
+//                existingPlayer.setLevel(level);
+//                existingPlayer.setScore(score);
+//                existingPlayer.setNumberOfMoves(numberOfMoves);
+//                existingPlayer.setCombo(combo);
+//                return existingPlayer; // Exit the method after updating
+//            }
+//        }
+//
+//        // If the player does not exist, create and add the new player
+//        Player player = new Player(playerName, null, level, score, numberOfMoves, combo);
+//        player.setMyTurn(isMyTurn);
+//        // playersList.add(player);
+//        return player;
+//    }
+
     public void receivePlayerList(DataInputStream in) {
         try {
             int len = in.readInt();
@@ -142,10 +165,23 @@ public class GameEngine {
             System.out.println("numberOfMoves = " + numberOfMoves);
             System.out.println("isMyTurn = " + isMyTurn);
 
-//            Player player = new Player(playerName, null, level, score, numberOfMoves, combo);
-//            player.setMyTurn(isMyTurn);
+            Player player = new Player(playerName, null, level, score, numberOfMoves, combo);
+            player.setMyTurn(isMyTurn);
 //            playersList.add(player);
-            Player player = addOrUpdatePlayer(playerName, isMyTurn, level, score, numberOfMoves, combo);
+
+            if (playerName.contains(myName)) {
+                if (self == null) {
+                    self = player;
+                } else {
+                    self.setLevel(level);
+                    self.setScore(score);
+                    self.setNumberOfMoves(numberOfMoves);
+                    self.setCombo(combo);
+                    self.setMyTurn(isMyTurn);
+                }
+            }
+
+            // Player player = addOrUpdatePlayer(playerName, isMyTurn, level, score, numberOfMoves, combo);
 
             GameWindow win = null;
             while (win == null) {
@@ -162,39 +198,11 @@ public class GameEngine {
         }
     }
 
-    public Player addOrUpdatePlayer(String playerName, boolean isMyTurn, int level, int score, int numberOfMoves, int combo) {
-        // Loop through the players list to find the player
-        for (Player existingPlayer : playersList) {
-            if (existingPlayer.getPlayerName().equals(playerName)) {
-                // Player found, update their attributes
-                existingPlayer.setMyTurn(isMyTurn);
-                existingPlayer.setLevel(level);
-                existingPlayer.setScore(score);
-                existingPlayer.setNumberOfMoves(numberOfMoves);
-                existingPlayer.setCombo(combo);
-                return existingPlayer; // Exit the method after updating
-            }
-        }
-
-        // If the player does not exist, create and add the new player
-        Player player = new Player(playerName, null, level, score, numberOfMoves, combo);
-        player.setMyTurn(isMyTurn);
-        playersList.add(player);
-        return player;
-    }
-
     public void receiveArray(DataInputStream in) throws IOException {
         int size = in.readInt();
         for (int i = 0; i < size; i++) {
             board[i] = in.readInt();
         }
-    }
-
-    public static GameEngine getInstance(String ip, int port) {
-        if (instance == null) {
-            instance = new GameEngine(ip, port);
-        }
-        return instance;
     }
 
     // /**
@@ -227,13 +235,13 @@ public class GameEngine {
 
     /**
      * Move and combine the cards based on the input direction
-     * 
+     *
      * @param dir
      */
     public void moveMerge(String dir) {
         System.out.println(dir);
 
-        Player self = playersList.stream().filter(p -> p.getPlayerName().equals(myName)).findFirst().get();
+        //Player self = playersList.stream().filter(p -> p.getPlayerName().equals(myName)).findFirst().get();
 
         if (!self.isMyTurn()) {
             System.out.println("GameEngine.moveMerge:: IS MY TURN == false");
