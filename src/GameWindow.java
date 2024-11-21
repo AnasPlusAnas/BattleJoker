@@ -11,6 +11,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -22,6 +23,8 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Objects;
 
 public class GameWindow {
     private static GameWindow instance;
@@ -37,9 +40,13 @@ public class GameWindow {
     Canvas canvas;
     @FXML
     HBox playerContainer;
+    @FXML
+    MenuItem menuItemInstructions;
+
     Stage stage;
     AnimationTimer animationTimer;
     private boolean isGameOver;
+    private final ArrayList<Player> playerArrayList = new ArrayList<>();
 
     private GameWindow(Stage stage, String ip, int port, String playerName) throws IOException {
         loadImages();
@@ -65,6 +72,8 @@ public class GameWindow {
         stage.heightProperty().addListener(h -> onHeightChangedWindow(((ReadOnlyDoubleProperty) h).getValue()));
         stage.setOnCloseRequest(event -> quit());
 
+        menuItemInstructions.setOnAction(event -> handleInstructions());
+
         stage.show();
         initCanvas();
 
@@ -83,6 +92,15 @@ public class GameWindow {
             return null;
         }
         return instance;
+    }
+
+    public void handleInstructions() {
+        HowToPlayWindow howToPlayWindow = new HowToPlayWindow();
+        try {
+            howToPlayWindow.show();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void setIsGameOver(boolean isOver) {
@@ -142,6 +160,13 @@ public class GameWindow {
                     if (moveCountLabel != null) {
                         moveCountLabel.setText("# of Moves: " + player.getNumberOfMoves());
                     }
+                    Player pToUpdate = playerArrayList.stream().filter(p -> Objects.equals(p.getPlayerName(), player.getPlayerName())).findFirst().get();
+
+                    pToUpdate.setScore(player.getScore());
+                    pToUpdate.setCombo(player.getCombo());
+                    pToUpdate.setNumberOfMoves(player.getNumberOfMoves());
+                    pToUpdate.setLevel(player.getLevel());
+
                     updatePlayerTurn(player);
 
                     return; // Player found and updated, exit method
@@ -176,12 +201,16 @@ public class GameWindow {
             statContainer.setPadding(new Insets(10.0, 10.0, 10.0, 10.0));
 
             playerContainer.getChildren().add(statContainer);
+            playerArrayList.add(player);
 
             updatePlayerTurn(player);
         });
     }
 
     public void removePlayerStat(String playerName) {
+        Player playerToRemove = playerArrayList.stream().filter(player -> player.getPlayerName().equals(playerName)).findFirst().get();
+        playerArrayList.remove(playerToRemove);
+
         for (int i = 0; i < playerContainer.getChildren().size(); i++) {
             VBox statContainer = (VBox) playerContainer.getChildren().get(i);
 
@@ -208,6 +237,9 @@ public class GameWindow {
                     if (child instanceof Label) {
                         Label label = (Label) child;
                         if (label.getText().equals(player.getPlayerName())) {
+                            if (player.isHost()) {
+
+                            }
                             // remove the child from the parent
                             if (player.isMyTurn()) {
                                 // Highlight this player's turn
@@ -238,13 +270,11 @@ public class GameWindow {
                 case RIGHT:
                     gameEngine.moveMerge("RIGHT");
                     break;
-                case A:
-                    HowToPlayWindow howToPlayWindow = new HowToPlayWindow();
-                    try {
-                        howToPlayWindow.show();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                case N:
+                    gameEngine.moveMerge("N");
+                    break;
+                case Z:
+                    gameEngine.moveMerge("Z");
                     break;
             }
             //gameEngine.moveMerge(event.getCode().toString());
@@ -265,7 +295,7 @@ public class GameWindow {
 
                     Platform.runLater(() -> {
                         try {
-                            new ScoreboardWindow();
+                            new ScoreboardWindow(playerArrayList);
                         } catch (IOException ex) {
                             throw new RuntimeException(ex);
                         }

@@ -6,6 +6,7 @@ public class Player implements Serializable {
 
     private int level;
     private int score;
+    private boolean isHost;
     private int combo;
     private String playerName;
     private int numberOfMoves;
@@ -80,4 +81,11 @@ this.undoFlag = true;    }
         this.undoFlag = undoFlag;
     }
 
+    public boolean isHost() {
+        return isHost;
+    }
+
+    public void setHost(boolean host) {
+        isHost = host;
+    }
 }

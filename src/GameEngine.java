@@ -63,7 +63,7 @@ public class GameEngine {
         }
     }
 
-    private void startReceiverThread() {
+    private void startReceiverThread() throws InterruptedException, IOException {
         receiverThread = new Thread(() -> {
             try {
                 while (true) { // handle it later
@@ -83,12 +83,9 @@ public class GameEngine {
                             break;
                         case 'F': // game is finished
                             System.out.println("GameEngine.startReceiverThread::GameOver");
-                            GameWindow win = null;
-                            while (win == null) {
-                                Thread.sleep(100);
-                                win = GameWindow.getInstance();
+                            if (getGameWindow()) {
+                                gameWindow.setIsGameOver(true);
                             }
-                            win.setIsGameOver(true);
                             break;
                         default:
                             System.out.println(data);
@@ -96,11 +93,24 @@ public class GameEngine {
                 }
             } catch (IOException ex) { // handle it later
                 ex.printStackTrace();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
             }
         });
         receiverThread.start();
+    }
+
+    private boolean getGameWindow(){
+        while (gameWindow == null) {
+            try {
+                Thread.sleep(100);
+                gameWindow = GameWindow.getInstance();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return true;
     }
 
     private void removePlayer(DataInputStream in) {
@@ -112,12 +122,14 @@ public class GameEngine {
 
             System.out.println("GameEngine.removePlayer");
 
-            GameWindow win = null;
-            while (win == null) {
-                Thread.sleep(100);
-                win = GameWindow.getInstance();
+//            GameWindow win = null;
+//            while (win == null) {
+//                Thread.sleep(100);
+//                win = GameWindow.getInstance();
+//            }
+            if (getGameWindow()) {
+                gameWindow.removePlayerStat(playerName);
             }
-            win.removePlayerStat(playerName);
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -156,6 +168,7 @@ public class GameEngine {
             int combo = in.readInt();
             int numberOfMoves = in.readInt();
             boolean isMyTurn = in.readBoolean();
+            boolean isHost = in.readBoolean();
 
             System.out.println("GameEngine.receivePlayerList");
             System.out.println("playerName = " + playerName);
@@ -164,12 +177,14 @@ public class GameEngine {
             System.out.println("combo = " + combo);
             System.out.println("numberOfMoves = " + numberOfMoves);
             System.out.println("isMyTurn = " + isMyTurn);
+            System.out.println("isHost = " + isHost);
 
             Player player = new Player(playerName, null, level, score, numberOfMoves, combo);
             player.setMyTurn(isMyTurn);
+            player.setHost(isHost);
 //            playersList.add(player);
 
-            if (playerName.contains(myName)) {
+            if (playerName.equals(myName)) {
                 if (self == null) {
                     self = player;
                 } else {
@@ -183,15 +198,13 @@ public class GameEngine {
 
             // Player player = addOrUpdatePlayer(playerName, isMyTurn, level, score, numberOfMoves, combo);
 
-            GameWindow win = null;
-            while (win == null) {
-                Thread.sleep(100);
-                win = GameWindow.getInstance();
-            }
-            win.insertPlayerStat(player);
-
-            if (playerName.equals(myName)) {
-
+//            GameWindow win = null;
+//            while (win == null) {
+//                Thread.sleep(100);
+//                win = GameWindow.getInstance();
+//            }
+            if (getGameWindow()) {
+                gameWindow.insertPlayerStat(player);
             }
         } catch (Exception ex) {
             ex.printStackTrace();

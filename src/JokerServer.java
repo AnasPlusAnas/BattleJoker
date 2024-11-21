@@ -17,6 +17,8 @@ public class JokerServer {
     final int[] board = new int[SIZE * SIZE];
     Random random = new Random(0);
 
+    private boolean isGameStarted = false;
+
     private static GameEngine instance;
     private boolean gameOver;
     private final int MAX_MOVES = 4;
@@ -126,11 +128,11 @@ public class JokerServer {
 
             // if its the first player, the player who started the game, he gets to play first.
             if (playerList.size() == 1) {
-                player.setMyTurn(true);
-                currentPlayer = player;
+                assignNewCurrentPlayer();
+                currentPlayer.setHost(true);
+                //currentPlayer = player;
             }
         }
-
 
 
         // send out the updated version of puzzle board to the client
@@ -149,15 +151,23 @@ public class JokerServer {
                     clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction
                             + "\n*** " + clientSocket);
 
-            if (Character.toLowerCase(direction) == 'n') {
-                if (currentPlayer.getUndoFlag()) {
-                    undoPuzzle();
-                    currentPlayer.setUndoFlag(false);
-                }
-            } else {
-                cloneBoard(); // cloned the board before move
-                moveMerge("" + direction);
-            }
+//            if (direction == 'N' && false) {
+//                if (currentPlayer.getUndoFlag() && totalMoveCount != 0) {
+//                    undoPuzzle();
+//                    currentPlayer.setUndoFlag(false);
+//                    synchronized (playerList) {
+//                        sendPlayerList();
+//                    }
+//
+//                    synchronized (clientList) {
+//                        sendPuzzle(_out);
+//                    }
+//                }
+//            }
+
+            cloneBoard(); // cloned the board before move
+            //if (!isGameStarted) return;
+            moveMerge("" + direction);
 
             // if nextRound = true then the game is still not over, else the game is over
             //gameOver = !nextRound();
@@ -195,25 +205,6 @@ public class JokerServer {
         }
     }
 
-    private void updatePlayerStat(Player player) {
-        synchronized (playerList) {
-            for (Player p : playerList) {
-                if (p.getPlayerName().equals(player.getPlayerName())) {
-                    p.setLevel(player.getLevel());
-                    p.setScore(player.getScore());
-                    p.setNumberOfMoves(player.getNumberOfMoves());
-                    p.setCombo(player.getCombo());
-                }
-            }
-            // send the updated player list to all clients
-            try {
-                sendPlayerList();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
     private void sendPlayerList() throws IOException {
         for (Socket client : clientList) {
             System.out.println("JokerServer.sendPlayerList");
@@ -231,6 +222,7 @@ public class JokerServer {
                 out.writeInt(player.getCombo());
                 out.writeInt(player.getNumberOfMoves());
                 out.writeBoolean(player.isMyTurn());
+                out.writeBoolean(player.isHost());
                 out.flush();
             }
         }
@@ -249,6 +241,12 @@ public class JokerServer {
     public void undoPuzzle() {
         // board = clonedBoard.clone();
         System.arraycopy(clonedBoard, 0, board, 0, board.length);
+        if (currentPlayer.getScore() != 0 && currentPlayer.getCombo() != 0 && currentPlayer.getNumberOfMoves() != 0) {
+            currentPlayer.setScore(getScore() - 1);
+            currentPlayer.setCombo(getCombo() - 1);
+            currentPlayer.setNumberOfMoves(currentPlayer.getNumberOfMoves() - 1);
+            totalMoveCount--;
+        }
     }
 
     public void cloneBoard() {
@@ -314,16 +312,17 @@ public class JokerServer {
                     try {
                         // get the player with the highest score
                         Player player = playerList.stream().max(Comparator.comparingInt(Player::getScore)).get();
-                        if (player == null) {
-                            throw new Exception("Cannot find player to update database");
-                        }
+
                         Database.putScore(player.getPlayerName(), player.getScore(), player.getLevel());
-                        sendGameOver();
-                        for (Player p :
-                                playerList) {
-                            p.setMyTurn(false);
+                        synchronized (clientList) {
+                            for (Player p : playerList) {
+                                p.setMyTurn(false);
+                            }
+                            sendPlayerList();
+                            sendGameOver();
                         }
-                        sendPlayerList();
+
+
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
@@ -335,7 +334,9 @@ public class JokerServer {
 
     // Method to assign a new current player randomly
     private void assignNewCurrentPlayer() {
-        currentPlayer.setMyTurn(false);
+        if (currentPlayer != null) {
+            currentPlayer.setMyTurn(false);
+        }
 
         // Randomly select a new player
         int nextPlayerIndex;
@@ -451,13 +452,15 @@ public class JokerServer {
                     // combo++;
                 }
                 board[j] = v;
-                if (v > level)
+                if (v > level){
                     level = v;
+                    playerList.forEach(player -> {
+                        player.setLevel(level);
+                    });
+                }
             }
             if (i != j)
                 numOfTilesMoved++;
-
-
         }
     }
 

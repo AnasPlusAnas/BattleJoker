@@ -10,6 +10,7 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 public class ScoreboardWindow {
     Stage stage;
@@ -17,7 +18,7 @@ public class ScoreboardWindow {
     @FXML
     ListView<String> scoreList;
 
-    public ScoreboardWindow() throws IOException {
+    public ScoreboardWindow(ArrayList<Player> playerList) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("scoreUI.fxml"));
         loader.setController(this);
         Parent root = loader.load();
@@ -30,9 +31,24 @@ public class ScoreboardWindow {
         stage.setMinHeight(scene.getHeight());
 
         setFont(14);
-        updateList();
+        scoreList.getItems().clear();
+        showRecentGame(playerList);
+        // updateList();
 
         stage.showAndWait();
+    }
+
+    public void showRecentGame(ArrayList<Player> playerList) {
+        try {
+            ObservableList<String> items = FXCollections.observableArrayList();
+            playerList.forEach(data->{
+                String scoreStr = String.format("%s (%s)", data.getScore(), data.getLevel());
+                items.add(String.format("%10s | %10s", data.getPlayerName(), scoreStr));
+            });
+            scoreList.setItems(items);
+        } catch(Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     private void setFont(int fontSize) {

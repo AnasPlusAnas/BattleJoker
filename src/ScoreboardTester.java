@@ -5,7 +5,7 @@ public class ScoreboardTester extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
         Database.connect();
-        new ScoreboardWindow();
+        //new ScoreboardWindow();
         Database.disconnect();
     }
 }
