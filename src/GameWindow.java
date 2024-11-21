@@ -20,6 +20,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -42,6 +43,9 @@ public class GameWindow {
     HBox playerContainer;
     @FXML
     MenuItem menuItemInstructions;
+    @FXML
+    MenuItem startButton;
+
 
     Stage stage;
     AnimationTimer animationTimer;
@@ -73,6 +77,7 @@ public class GameWindow {
         stage.setOnCloseRequest(event -> quit());
 
         menuItemInstructions.setOnAction(event -> handleInstructions());
+        startButton.setOnAction(event -> startGame());
 
         stage.show();
         initCanvas();
@@ -92,6 +97,10 @@ public class GameWindow {
             return null;
         }
         return instance;
+    }
+
+    public void startGame(){
+
     }
 
     public void handleInstructions() {

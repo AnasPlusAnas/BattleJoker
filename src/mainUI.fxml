@@ -22,6 +22,9 @@
         <Menu mnemonicParsing="false" text="Help">
             <MenuItem fx:id="mnuAbout" mnemonicParsing="false" text="About..." />
         </Menu>
+        <Menu mnemonicParsing="false" text="Start">
+            <MenuItem fx:id="startButton" mnemonicParsing="false" text="Start" />
+        </Menu>
     </MenuBar>
     <ScrollPane vbarPolicy="NEVER">
         <HBox fx:id="playerContainer" style="-fx-background-color: #a88;" prefHeight="115.0" minHeight="115.0" maxHeight="Infinity">

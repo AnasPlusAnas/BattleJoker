@@ -4,8 +4,10 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.cell.TextFieldListCell;
+import javafx.event.Event;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
@@ -17,6 +19,10 @@ public class ScoreboardWindow {
 
     @FXML
     ListView<String> scoreList;
+
+    @FXML
+    Button showTop10;
+
 
     public ScoreboardWindow(ArrayList<Player> playerList) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("scoreUI.fxml"));
@@ -34,8 +40,14 @@ public class ScoreboardWindow {
         scoreList.getItems().clear();
         showRecentGame(playerList);
         // updateList();
+        showTop10.setOnMouseClicked(this::OnButtonClick);
 
         stage.showAndWait();
+    }
+
+    private void OnButtonClick(Event event) {
+        updateList();
+        showTop10.setVisible(false);
     }
 
     public void showRecentGame(ArrayList<Player> playerList) {
@@ -50,6 +62,7 @@ public class ScoreboardWindow {
             ex.printStackTrace();
         }
     }
+
 
     private void setFont(int fontSize) {
         scoreList.setCellFactory(param -> {

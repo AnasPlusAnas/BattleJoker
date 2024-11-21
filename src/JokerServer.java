@@ -166,7 +166,7 @@ public class JokerServer {
 //            }
 
             cloneBoard(); // cloned the board before move
-            //if (!isGameStarted) return;
+           /// if (!isGameStarted) return;
             moveMerge("" + direction);
 
             // if nextRound = true then the game is still not over, else the game is over
