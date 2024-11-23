@@ -42,6 +42,7 @@ public class GameEngine {
     private final char GET_REMOVE_PLAYER_FROM_SERVER = 'Q';
     private final char GET_GAMEOVER_FROM_SERVER = 'F';
     private final char CHECK_IS_AWAITING = 'W';
+    private final char REQUEST_RESTART_THE_GAME = 'E';
     //Command Map
     private final Map<Character, String> COMMAND_MAP = new HashMap<Character, String>() {{
         put(CHECK_IS_STARTED, "Check is the Game Started?");
@@ -51,6 +52,7 @@ public class GameEngine {
         put(GET_REMOVE_PLAYER_FROM_SERVER,"Receive Removed Player from the server");
         put(GET_GAMEOVER_FROM_SERVER,"Receive Gameover from the server");
         put(CHECK_IS_AWAITING,"Check is awaiting from the server");
+        put(REQUEST_RESTART_THE_GAME,"Request the server to restart the game");
     }};
 
 
@@ -558,15 +560,14 @@ public class GameEngine {
 
 
     public void gameRestart() {
-        log("Try to restart the game!");
+        //log("Try to restart the game!");
 
         // send the data to the server
-        try {
-            dataOutStream.write('E');
-            dataOutStream.flush();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+
+        sendToServer(REQUEST_RESTART_THE_GAME);
+            //dataOutStream.write('E');
+            //dataOutStream.flush();
+
     }
 
     private void log(String msg){

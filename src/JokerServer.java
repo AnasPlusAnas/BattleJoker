@@ -277,7 +277,7 @@ public class JokerServer {
 
 
             }else{
-                log("CurrentPlayer:"+currentPlayer.getPlayerName());
+                log("CurrentPlayer = "+currentPlayer.getPlayerName());
             }
             //20241122 Melody updated - End
 
@@ -375,7 +375,7 @@ public class JokerServer {
                 out.writeBoolean(player.isHost());
                 out.writeBoolean(player.isAwaitingPlayer());
                 out.flush();
-                log("*** "+player.getPlayerName());
+                log("Sending: "+player);
             }
         }
     }
@@ -755,7 +755,7 @@ public class JokerServer {
     }
 
     public void startNewGame(){
-        log("The host started the game!");
+        //log("The host started the game!");
         for (int i = 0; i < board.length; i++) {
             board[i] = 0; // Set each element to 0
         }
