@@ -23,7 +23,7 @@
             <MenuItem fx:id="mnuAbout" mnemonicParsing="false" text="About..." />
         </Menu>
         <Menu mnemonicParsing="false" text="Start">
-            <MenuItem fx:id="startButton" mnemonicParsing="false" text="Start" />
+            <MenuItem fx:id="startButton" mnemonicParsing="false" text="Start(Host only)" />
         </Menu>
     </MenuBar>
     <ScrollPane vbarPolicy="NEVER">

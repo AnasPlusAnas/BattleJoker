@@ -15,6 +15,8 @@ public class Player implements Serializable {
 
     private boolean isMyTurn;
 
+    private boolean isAwaitingPlayer;
+
 
     public Player(String playerName, Socket socket, int level, int score, int numberOfMoves, int combo) {
         this.playerName = playerName;
@@ -23,7 +25,9 @@ public class Player implements Serializable {
         this.score = score;
         this.numberOfMoves = numberOfMoves;
         this.combo = combo;
-this.undoFlag = true;    }
+        this.undoFlag = true;
+        this.isAwaitingPlayer = false;
+    }
 
     public boolean isMyTurn() {
         return isMyTurn;
@@ -87,5 +91,13 @@ this.undoFlag = true;    }
 
     public void setHost(boolean host) {
         isHost = host;
+    }
+
+    public void setAwaitingPlayer(boolean awaitingPlayer) {
+        isAwaitingPlayer = awaitingPlayer;
+    }
+
+    public boolean isAwaitingPlayer() {
+        return this.isAwaitingPlayer;
     }
 }

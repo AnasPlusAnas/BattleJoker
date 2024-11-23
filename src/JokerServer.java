@@ -9,6 +9,7 @@ import java.util.*;
 public class JokerServer {
     private final ArrayList<Socket> clientList = new ArrayList<>(); // remember all the client
     private final ArrayList<Player> playerList = new ArrayList<>(); // remember all the client
+    private final ArrayList<Player> awaitingPlayerList = new ArrayList<>(); // remember all the client
 
     // client
     // game setting
@@ -30,6 +31,7 @@ public class JokerServer {
     private int totalMoveCount;
     private int numOfTilesMoved;
     private Player currentPlayer = null;
+    private int validStep = 0;
 
     final int[] clonedBoard = new int[SIZE * SIZE]; // for undo method
     private final Map<String, Runnable> actionMap = new HashMap<>();
@@ -79,6 +81,7 @@ public class JokerServer {
 
                                 // Remove the player from the list
                                 playerList.remove(playerToRemove);
+                                awaitingPlayerList.remove(playerToRemove);
 
                                 try {
                                     sendRemovedPlayer(playerToRemove);
@@ -122,16 +125,32 @@ public class JokerServer {
         // create a new player object and add it to the playerList
         Player player = new Player(playerName, clientSocket, 0, 0, 0, 0);
 
+        //20241122 Melody updated - Start
         // add the player to the playerList
         synchronized (playerList) {
-            playerList.add(player);
+            System.out.println("Add player"+isGameStarted);
+            if(isGameStarted) {    //TODO: Confirm logic correct
+                System.out.println("testing");
+                player.setAwaitingPlayer(true); //TODO: This boolean not used yet
+                awaitingPlayerList.add(player);
+            }else {
+                playerList.add(player);
+            }
+            System.out.println("Added player:"+player.getPlayerName());
+            //20241122 Melody updated - End
 
             // if its the first player, the player who started the game, he gets to play first.
-            if (playerList.size() == 1) {
+            if (playerList.size() == 1 && awaitingPlayerList.size() == 0) {
                 assignNewCurrentPlayer();
                 currentPlayer.setHost(true);
                 //currentPlayer = player;
             }
+
+            //20241122 Melody updated - Start
+            if(playerList.size() == 4){
+                isGameStarted = true;
+            }
+            //20241122 Melody updated - End
         }
 
 
@@ -147,9 +166,50 @@ public class JokerServer {
 
         while (true) {
             char direction = (char) inputStream.read();
-            System.out.println(
-                    clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction
+            System.out.println("ClientSocket:"+clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction
                             + "\n*** " + clientSocket);
+            //20241122 Melody updated - Start
+
+            if(direction == 'C'){
+                //DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+                System.out.println("Writing isGameStarted");
+                _out.writeBoolean(isGameStarted);
+                System.out.println("Writing isGameStarted End - "+isGameStarted);
+            }
+
+            Player currentPlayer = getPlayerBySocket(clientSocket);
+            if(currentPlayer == null){
+                Player awaitingCurrentPlayer = getAwaitingPlayerBySocket(clientSocket);
+                if(awaitingCurrentPlayer == null){
+                    continue;
+                }
+                // TODO handle awaiting player
+                // Code here:
+
+
+            }else{
+                System.out.println("CurrentPlayer:"+currentPlayer.getPlayerName());
+            }
+            //20241122 Melody updated - End
+
+            /*
+            if(direction == 'P'){
+                sendPlayerList();
+                continue;
+            }
+            */
+
+            //20241122 Melody updated - Start
+            if(direction == 'S' && currentPlayer.isHost()){
+                System.out.println("The host started the game!");
+                isGameStarted = true;
+            }
+
+            if(!isGameStarted){
+                continue;
+            }
+
+            //20241122 Melody updated - End
 
 //            if (direction == 'N' && false) {
 //                if (currentPlayer.getUndoFlag() && totalMoveCount != 0) {
@@ -212,6 +272,9 @@ public class JokerServer {
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
 
             for (Player player : playerList) {
+                if(player.isAwaitingPlayer()){
+                    continue;
+                }
                 out.write('P');
                 byte[] bytes = player.getPlayerName().getBytes();
                 out.writeInt(bytes.length);
@@ -224,6 +287,8 @@ public class JokerServer {
                 out.writeBoolean(player.isMyTurn());
                 out.writeBoolean(player.isHost());
                 out.flush();
+                System.out.println("***");
+                System.out.println(player.getPlayerName());
             }
         }
     }
@@ -320,6 +385,7 @@ public class JokerServer {
                             }
                             sendPlayerList();
                             sendGameOver();
+
                         }
 
 
@@ -343,7 +409,7 @@ public class JokerServer {
 
         do {
             nextPlayerIndex = random.nextInt(playerList.size());
-        } while (playerList.get(nextPlayerIndex) == currentPlayer); // Ensure it's not the current player
+        } while (playerList.get(nextPlayerIndex) == currentPlayer || playerList.get(nextPlayerIndex).isAwaitingPlayer()); // Ensure it's not the current player
 
         currentPlayer = playerList.get(nextPlayerIndex); // Set the next player
         currentPlayer.setMyTurn(true); // Set their turn
@@ -493,6 +559,40 @@ public class JokerServer {
     public int getMoveCount() {
         return totalMoveCount;
     }
+
+    //20241122 Melody updated - Start
+    public Player getPlayerBySocket(Socket socket){
+        for(int i = 0; i < playerList.size(); i++){
+            Player player = playerList.get(i);
+            if(player.getSocket().equals(socket)){
+                return player;
+            }
+        }
+        return null;
+    }
+
+    public Player getAwaitingPlayerBySocket(Socket socket){
+        for(int i = 0; i < awaitingPlayerList.size(); i++){
+            Player player = awaitingPlayerList.get(i);
+            if(player.getSocket().equals(socket)){
+                return player;
+            }
+        }
+        return null;
+    }
+
+    public void startNewGame(){
+        if(isGameOver()){
+            for (int i = 0; i < board.length; i++) {
+                board[i] = 0; // Set each element to 0
+            }
+        }
+
+
+    }
+    //20241122 Melody updated - End
+
+
 
     // handle the exception separately instead of just throwing
     public static void main(String[] args) throws IOException {

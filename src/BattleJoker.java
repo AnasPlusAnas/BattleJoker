@@ -17,7 +17,10 @@ public class BattleJoker extends Application {
 
 //            GameWindow win = new GameWindow(primaryStage, ip, port, dialog.getPlayername());
             GameWindow win = GameWindow.getInstance(primaryStage, ip, port, dialog.getPlayername());
+
             win.setName(dialog.getPlayername());
+
+
             System.out.println("BattleJoker.start");
 
             Database.connect();

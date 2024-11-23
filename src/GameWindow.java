@@ -1,4 +1,6 @@
 import javafx.animation.AnimationTimer;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.fxml.FXML;
@@ -19,6 +21,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 
 import java.io.IOException;
@@ -51,6 +54,9 @@ public class GameWindow {
     AnimationTimer animationTimer;
     private boolean isGameOver;
     private final ArrayList<Player> playerArrayList = new ArrayList<>();
+    private int currentPlayerCount = 0;
+    private boolean isGameStart;
+    private boolean isAwaitingPlayer;
 
     private GameWindow(Stage stage, String ip, int port, String playerName) throws IOException {
         loadImages();
@@ -77,13 +83,24 @@ public class GameWindow {
         stage.setOnCloseRequest(event -> quit());
 
         menuItemInstructions.setOnAction(event -> handleInstructions());
+        //20241122 Melody updated - Start
         startButton.setOnAction(event -> startGame());
-
+        //20241122 Melody updated - End
         stage.show();
-        initCanvas();
 
-        gameStart();
+        //TODO: Handle awaiting player
+        isGameStart = gameEngine.checkGameStart();
+        System.out.println("testing for game window: " + isGameStart);
+
+        if(isGameStart){
+            WaitOrLeaveDialog waitOrLeaveDialog = new WaitOrLeaveDialog(this);
+        }
+            initCanvas();
+            gameStart();
+
     }
+
+
 
     public static GameWindow getInstance(Stage stage, String ip, int port, String playerName) throws IOException {
         if (instance == null) {
@@ -99,9 +116,21 @@ public class GameWindow {
         return instance;
     }
 
+    //20241122 Melody updated - Start
     public void startGame(){
-
+        //initCanvas();
+        gameEngine.gameStart();
+        //gameStart();
     }
+
+    /*
+    public boolean checkGameStart(){
+        gameEngine.
+    }
+
+     */
+
+    //20241122 Melody updated - End
 
     public void handleInstructions() {
         HowToPlayWindow howToPlayWindow = new HowToPlayWindow();
@@ -211,7 +240,9 @@ public class GameWindow {
 
             playerContainer.getChildren().add(statContainer);
             playerArrayList.add(player);
-
+            if(playerArrayList.size() > currentPlayerCount){
+                currentPlayerCount = playerArrayList.size();
+            }
             updatePlayerTurn(player);
         });
     }
@@ -246,9 +277,6 @@ public class GameWindow {
                     if (child instanceof Label) {
                         Label label = (Label) child;
                         if (label.getText().equals(player.getPlayerName())) {
-                            if (player.isHost()) {
-
-                            }
                             // remove the child from the parent
                             if (player.isMyTurn()) {
                                 // Highlight this player's turn
@@ -266,6 +294,9 @@ public class GameWindow {
 
     private void initCanvas() {
         canvas.setOnKeyPressed(event -> {
+            if(isAwaitingPlayer){
+                return;
+            }
             switch (event.getCode()) {
                 case UP:
                     gameEngine.moveMerge("UP");
@@ -376,4 +407,14 @@ public class GameWindow {
         // nameLabel.setText(name);
         // gameEngine.setPlayerName(name);
     }
+
+    public void setIsAwaitingPlayer(boolean isAwaitingPlayer){
+        this.isAwaitingPlayer = isAwaitingPlayer;
+    }
+
+    public boolean getIsGameStarted(){
+        return this.isGameStart;
+    }
+
+
 }

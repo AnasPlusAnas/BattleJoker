@@ -255,6 +255,10 @@ public class GameEngine {
         System.out.println(dir);
 
         //Player self = playersList.stream().filter(p -> p.getPlayerName().equals(myName)).findFirst().get();
+        if(self == null){
+            System.out.println("GameEngine.moveMerge:: Game haven't started.");
+            return;
+        }
 
         if (!self.isMyTurn()) {
             System.out.println("GameEngine.moveMerge:: IS MY TURN == false");
@@ -396,4 +400,60 @@ public class GameEngine {
     // public int getMoveCount() {
     // return totalMoveCount;
     // }
+
+    //20241122 Melody updated - Start
+    public void gameStart() {
+        System.out.println("Try to start the game!");
+
+        // send the data to the server
+        try {
+            dataOutStream.write('S');
+            dataOutStream.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public boolean checkGameStart() {
+        System.out.println("Is Game Started?");
+        boolean response = false;
+        // send the data to the server
+        try {
+            //Before
+            System.out.println("1"+dataInStream.toString());
+            clearInputStream(dataInStream);
+            //After
+            System.out.println("2"+dataInStream.toString());
+            dataOutStream.write('C');
+            dataOutStream.flush();
+
+            response = dataInStream.readBoolean();
+            System.out.println("***"+response);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return response;
+    }
+
+    private static void clearInputStream(DataInputStream in) throws IOException {
+        while (in.available() > 0) {
+            in.skipBytes(in.available());
+        }
+    }
+
+    //20241122 Melody updated - End
+
+    /*
+    public void getCurrentPlayerCount() {
+        System.out.println("Try to get current player count");
+        // send the data to the server
+        try {
+            dataOutStream.write('P');
+            dataOutStream.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    */
 }
