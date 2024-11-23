@@ -4,6 +4,8 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class BattleJoker extends Application {
    // private Socket clientSocket;
@@ -11,19 +13,20 @@ public class BattleJoker extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
+            log("Login Dialog started");
             GetNameDialog dialog = new GetNameDialog();
             String ip = dialog.getIp();
             int port = dialog.getPort();
 
 //            GameWindow win = new GameWindow(primaryStage, ip, port, dialog.getPlayername());
+
+            log("Initialize Game Window");
             GameWindow win = GameWindow.getInstance(primaryStage, ip, port, dialog.getPlayername());
 
             win.setName(dialog.getPlayername());
-
-
-            System.out.println("BattleJoker.start");
-
+            //log("BattleJoker.start");
             Database.connect();
+            log("Player \""+dialog.getPlayername()+"\" connected");
 
 
             // currently hardcoded, change later
@@ -46,6 +49,24 @@ public class BattleJoker extends Application {
         System.setErr(new FilteredStream(System.err));  // All JavaFX'es version warnings will not be displayed
 
         launch();
+    }
+
+    private void log(String msg){
+        // Get current datetime
+        String dateTime = getCurrentDateTimeStr();
+        // Print log
+        String logMessage = dateTime + " - " + msg;
+        System.out.println(logMessage);
+    }
+
+    private void log(char msg){
+        log(""+msg);
+    }
+
+    private String getCurrentDateTimeStr(){
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String dateTime = sdf.format(new Date());
+        return dateTime;
     }
 
 }

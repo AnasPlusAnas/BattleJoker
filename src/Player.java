@@ -93,11 +93,30 @@ public class Player implements Serializable {
         isHost = host;
     }
 
+    public void resetPlayerStatus(){
+        this.level = 0;
+        this.score = 0;
+        this.numberOfMoves = 0;
+        this.combo = 0;
+        this.undoFlag = true;
+        this.isAwaitingPlayer = false;
+        this.isHost = false;
+        this.isMyTurn = false;
+    }
+
     public void setAwaitingPlayer(boolean awaitingPlayer) {
         isAwaitingPlayer = awaitingPlayer;
     }
 
     public boolean isAwaitingPlayer() {
         return this.isAwaitingPlayer;
+    }
+
+    public String toString(){
+        String msg = "";
+        msg += "playerName = "+playerName;
+        msg += " / isAwaitingPlayer = "+isAwaitingPlayer;
+        msg += " / socket= "+socket;
+        return msg;
     }
 }

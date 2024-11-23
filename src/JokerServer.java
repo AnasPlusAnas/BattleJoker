@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class JokerServer {
     private final ArrayList<Socket> clientList = new ArrayList<>(); // remember all the client
@@ -31,7 +33,8 @@ public class JokerServer {
     private int totalMoveCount;
     private int numOfTilesMoved;
     private Player currentPlayer = null;
-    private int validStep = 0;
+    private int nextPlayerIndex = 0;
+    private boolean restartFlag = false;
 
     final int[] clonedBoard = new int[SIZE * SIZE]; // for undo method
     private final Map<String, Runnable> actionMap = new HashMap<>();
@@ -40,7 +43,11 @@ public class JokerServer {
         System.out.printf(str, o);
     }
 
+
+
     public JokerServer(int port) throws IOException {
+        log("Joker Server has started");
+
         // define a hash map to contain the links from the actions to the corresponding
         // methods
         actionMap.put("U", this::moveUp);
@@ -49,7 +56,7 @@ public class JokerServer {
         actionMap.put("R", this::moveRight);
 
         // start the first round
-        nextRound();
+        //nextRound();
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) { // Allow multiple connections
@@ -57,7 +64,7 @@ public class JokerServer {
 
                 synchronized (clientList) {
                     clientList.add(clientSocket); // add the client socket into the clientList
-                    System.out.println("clientSocket:" + clientSocket.toString());
+                    log("Added new clientSocket: " + clientSocket.toString());
                 }
 
                 Thread t = new Thread(() -> {
@@ -65,7 +72,7 @@ public class JokerServer {
                         serve(clientSocket); // try if generate exception (client disconnect to the server)
                     } catch (IOException e) {
                         // e.printStackTrace();
-                        System.out.println("The connection was dropped by the client! "
+                        log("The connection was dropped by the client! "
                                 + clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort());
 
                         synchronized (clientList) {
@@ -110,8 +117,7 @@ public class JokerServer {
 
     private void serve(Socket clientSocket) throws IOException {
         // proof client connect successfully
-        print("Established a connection to host %s:%d\n\n",
-                clientSocket.getInetAddress(), clientSocket.getPort());
+        log("Established a connection: "+clientSocket);
 
         // start receiving the moves from client. (GameEngine.java, moveMerge())
         BufferedInputStream bufferedInputStream = new BufferedInputStream(clientSocket.getInputStream());
@@ -128,18 +134,16 @@ public class JokerServer {
         //20241122 Melody updated - Start
         // add the player to the playerList
         synchronized (playerList) {
-            System.out.println("Add player"+isGameStarted);
-            if(isGameStarted) {    //TODO: Confirm logic correct
-                System.out.println("testing");
-                player.setAwaitingPlayer(true); //TODO: This boolean not used yet
+            if(isGameStarted) {
+                player.setAwaitingPlayer(true);
                 awaitingPlayerList.add(player);
             }else {
                 playerList.add(player);
             }
-            System.out.println("Added player:"+player.getPlayerName());
+            log("Added new player: "+player);
             //20241122 Melody updated - End
 
-            // if its the first player, the player who started the game, he gets to play first.
+            // if the first player, the player who started the game, he gets to play first.
             if (playerList.size() == 1 && awaitingPlayerList.size() == 0) {
                 assignNewCurrentPlayer();
                 currentPlayer.setHost(true);
@@ -147,8 +151,9 @@ public class JokerServer {
             }
 
             //20241122 Melody updated - Start
-            if(playerList.size() == 4){
-                isGameStarted = true;
+            if(playerList.size() >= 4){
+                //isGameStarted = true;
+                startNewGame();
             }
             //20241122 Melody updated - End
         }
@@ -157,7 +162,15 @@ public class JokerServer {
         // send out the updated version of puzzle board to the client
         DataOutputStream _out = new DataOutputStream(clientSocket.getOutputStream());
         synchronized (clientList) {
-            sendPuzzle(_out);
+            for (Socket socket : clientList) {
+                DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
+                // the socket
+                //out.write(direction); // send data to the outputSteam
+                //out.flush(); // force to send out the data immediately
+
+                sendPuzzle(out);
+
+            }
         }
 
         synchronized (playerList) {
@@ -166,15 +179,91 @@ public class JokerServer {
 
         while (true) {
             char direction = (char) inputStream.read();
-            System.out.println("ClientSocket:"+clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction
-                            + "\n*** " + clientSocket);
+            //log("ClientSocket:"+clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction
+            //                + "\n*** " + clientSocket);
+            log("Command = "+direction+" (requested by "+getPlayerBySocket(clientSocket)+")");
+
             //20241122 Melody updated - Start
+
+            if(direction == 'P'){
+                sendPlayerList();
+                continue;
+            }
+
+
+            if(direction == 'E' && !restartFlag){
+                //DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+                //log("Restarting the game");
+
+                //sendPlayerList();
+                DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+                awaitingPlayerJoinGame();
+                endGameAction();
+                //sendPuzzle(out);
+                //sendPlayerList();
+
+                synchronized (clientList) {
+                    for (Socket socket : clientList) {
+                        out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
+                        // the socket
+                        //out.write(direction); // send data to the outputSteam
+                        //out.flush(); // force to send out the data immediately
+
+                        sendPuzzle(out);
+
+                    }
+                }
+
+                restartFlag = true;
+
+/*
+                synchronized (clientList) {
+                    for (Socket socket : clientList) {
+                        DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
+                        // the socket
+                        //out.write(direction); // send data to the outputSteam
+                        //out.flush(); // force to send out the data immediately
+
+                    }
+                }
+
+ */
+                //score = 0;
+                /*
+                synchronized (clientList) {
+                    for (Socket socket : clientList) {
+                        DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
+                        // the socket
+                        //out.write(direction); // send data to the outputSteam
+                        //out.flush(); // force to send out the data immediately
+                        sendPlayerList();
+                        sendPuzzle(out);
+                    }
+                }
+                //_out.writeBoolean(isGameStarted);
+                 */
+
+            }
 
             if(direction == 'C'){
                 //DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-                System.out.println("Writing isGameStarted");
                 _out.writeBoolean(isGameStarted);
-                System.out.println("Writing isGameStarted End - "+isGameStarted);
+                log("Return isGameStarted = "+isGameStarted);
+                continue;
+            }
+
+            if(direction == 'W'){
+                boolean isAwaitingPlayer = false;
+                Player tempPlayer = getPlayerBySocket(clientSocket);
+
+                if(playerList.contains(tempPlayer)){
+                    isAwaitingPlayer = false;
+                }else{
+                    isAwaitingPlayer = true;
+                }
+                _out.writeBoolean(isAwaitingPlayer);
+                log("Return isAwaitingPlayer = "+isAwaitingPlayer);
+                continue;
             }
 
             Player currentPlayer = getPlayerBySocket(clientSocket);
@@ -188,7 +277,7 @@ public class JokerServer {
 
 
             }else{
-                System.out.println("CurrentPlayer:"+currentPlayer.getPlayerName());
+                log("CurrentPlayer:"+currentPlayer.getPlayerName());
             }
             //20241122 Melody updated - End
 
@@ -200,9 +289,8 @@ public class JokerServer {
             */
 
             //20241122 Melody updated - Start
-            if(direction == 'S' && currentPlayer.isHost()){
-                System.out.println("The host started the game!");
-                isGameStarted = true;
+            if(direction == 'S' && currentPlayer.isHost() && !isGameStarted){
+                startNewGame();
             }
 
             if(!isGameStarted){
@@ -238,8 +326,8 @@ public class JokerServer {
                 for (Socket socket : clientList) {
                     DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
                                                                                            // the socket
-                    out.write(direction); // send data to the outputSteam
-                    out.flush(); // force to send out the data immediately
+                    //out.write(direction); // send data to the outputSteam
+                    //out.flush(); // force to send out the data immediately
 
                     sendPuzzle(out);
                 }
@@ -251,8 +339,8 @@ public class JokerServer {
 
     private void sendRemovedPlayer(Player player) throws IOException {
         for (Socket client : clientList) {
-            System.out.println("JokerServer.sendRemovedPlayer");
-            System.out.println("player = " + player.getPlayerName());
+            log("JokerServer.sendRemovedPlayer");
+            log("player = " + player.getPlayerName());
 
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
 
@@ -267,7 +355,7 @@ public class JokerServer {
 
     private void sendPlayerList() throws IOException {
         for (Socket client : clientList) {
-            System.out.println("JokerServer.sendPlayerList");
+            log("JokerServer.sendPlayerList");
 
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
 
@@ -279,23 +367,22 @@ public class JokerServer {
                 byte[] bytes = player.getPlayerName().getBytes();
                 out.writeInt(bytes.length);
                 out.write(bytes);
-
                 out.writeInt(player.getLevel());
                 out.writeInt(player.getScore());
                 out.writeInt(player.getCombo());
                 out.writeInt(player.getNumberOfMoves());
                 out.writeBoolean(player.isMyTurn());
                 out.writeBoolean(player.isHost());
+                out.writeBoolean(player.isAwaitingPlayer());
                 out.flush();
-                System.out.println("***");
-                System.out.println(player.getPlayerName());
+                log("*** "+player.getPlayerName());
             }
         }
     }
 
     private void sendGameOver() throws IOException {
         for (Socket client : clientList) {
-            System.out.println("JokerServer.sendGameOver");
+            log("JokerServer.sendGameOver");
 
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
             out.write('F');
@@ -385,7 +472,25 @@ public class JokerServer {
                             }
                             sendPlayerList();
                             sendGameOver();
+                            gameOver = false;
+                            restartFlag = false;
+/*
+                            synchronized (clientList) {
+                                for (Socket socket : clientList) {
+                                    DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
+                                    // the socket
+                                    //out.write(direction); // send data to the outputSteam
+                                    //out.flush(); // force to send out the data immediately
 
+
+                                    awaitingPlayerJoinGame();
+                                    endGameAction();
+
+                                    sendPuzzle(out);
+                                    sendPlayerList();
+                                }
+                            }
+                            */
                         }
 
 
@@ -404,17 +509,18 @@ public class JokerServer {
             currentPlayer.setMyTurn(false);
         }
 
-        // Randomly select a new player
-        int nextPlayerIndex;
+        // Update current player to the next player
 
         do {
-            nextPlayerIndex = random.nextInt(playerList.size());
+            nextPlayerIndex = (nextPlayerIndex+1)%playerList.size();
         } while (playerList.get(nextPlayerIndex) == currentPlayer || playerList.get(nextPlayerIndex).isAwaitingPlayer()); // Ensure it's not the current player
 
         currentPlayer = playerList.get(nextPlayerIndex); // Set the next player
         currentPlayer.setMyTurn(true); // Set their turn
         score = currentPlayer.getScore();
         combo = currentPlayer.getCombo();
+
+        log("Player index = "+nextPlayerIndex);
     }
 
     /**
@@ -581,15 +687,126 @@ public class JokerServer {
         return null;
     }
 
-    public void startNewGame(){
-        if(isGameOver()){
-            for (int i = 0; i < board.length; i++) {
-                board[i] = 0; // Set each element to 0
+    public void awaitingPlayerJoinGame(){
+        ArrayList<Player> removedList = new ArrayList<>();
+
+        if((playerList.size()+awaitingPlayerList.size()) > 4){
+            int moveToAwaitingPlayerCount = (playerList.size()+awaitingPlayerList.size()) - 4;
+
+            for(int i = 0; i < moveToAwaitingPlayerCount; i++){
+                Player player = playerList.get(i);
+                //playerList.remove(player);
+                removedList.add(player);
+                player.setAwaitingPlayer(true);
+                awaitingPlayerList.add(player);
+            }
+
+            for(int i = 0; i < removedList.size(); i++){
+                playerList.remove(removedList.get(i));
+            }
+
+            removedList = new ArrayList<>();
+
+        }
+
+        for(int i = 0; i < awaitingPlayerList.size(); i++){
+            if(playerList.size() < 4){
+                Player player = awaitingPlayerList.get(i);
+                //awaitingPlayerList.remove(player);
+                removedList.add(player);
+                player.setAwaitingPlayer(false);
+                //player.resetPlayerStatus();
+                playerList.add(player);
             }
         }
 
+        for(int i = 0; i < removedList.size(); i++){
+            awaitingPlayerList.remove(removedList.get(i));
+        }
 
+        for(int i = 0; i < playerList.size(); i++){
+            Player player = playerList.get(i);
+            //player.resetPlayerStatus();
+            if(i == 0){
+                player.setHost(true);
+                player.setMyTurn(true);
+                currentPlayer = player;
+            }else{
+                player.setHost(false);
+                player.setMyTurn(false);
+            }
+        }
+
+        removedList = new ArrayList<>();
     }
+
+    public void endGameAction(){
+        for (int i = 0; i < board.length; i++) {
+            board[i] = 0; // Set each element to 0
+        }
+        score = 0;
+        level = 1;
+        combo = 0;
+        totalMoveCount = 0;
+        isGameStarted = false;
+        if(playerList.size() >= 4 && !isGameStarted){
+            startNewGame();
+        }
+    }
+
+    public void startNewGame(){
+        log("The host started the game!");
+        for (int i = 0; i < board.length; i++) {
+            board[i] = 0; // Set each element to 0
+        }
+        //For DEBUG
+        for(int i = 0; i < playerList.size(); i++){
+            //log("***DEBUG: "+playerList.get(i).getPlayerName()+"/HOST:"+playerList.get(i).isHost()+"/TURN:"+playerList.get(i).isMyTurn());
+            Player player = playerList.get(i);
+            player.resetPlayerStatus();
+            if(i == 0){
+                player.setHost(true);
+                player.setMyTurn(true);
+            }else{
+                player.setHost(false);
+                player.setMyTurn(false);
+            }
+        }
+
+        /*
+        for(int i = 0; i < playerList.size(); i++){
+            Player player = playerList.get(i);
+            player.resetPlayerStatus();
+            if(i == 0){
+                player.setHost(true);
+                player.setMyTurn(true);
+            }
+
+        }
+         */
+        nextRound();
+        isGameStarted = true;
+        nextPlayerIndex = 0;
+    }
+
+    private void log(String msg){
+        // Get current datetime
+        String dateTime = getCurrentDateTimeStr();
+        // Print log
+        String logMessage = dateTime + " - " + msg;
+        System.out.println(logMessage);
+    }
+
+    private void log(char msg){
+        log(""+msg);
+    }
+
+    private String getCurrentDateTimeStr(){
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String dateTime = sdf.format(new Date());
+        return dateTime;
+    }
+
     //20241122 Melody updated - End
 
 

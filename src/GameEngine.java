@@ -2,6 +2,10 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 public class GameEngine {
     // game setting
@@ -29,6 +33,26 @@ public class GameEngine {
     // private int numOfTilesMoved;
 
     // private final Map<String, Runnable> actionMap = new HashMap<>();
+
+    //Command
+    private final char CHECK_IS_STARTED = 'C';
+    private final char START_THE_GAME = 'S';
+    private final char GET_ARRAY_FROM_SERVER = 'A';
+    private final char GET_PLAYER_LIST_FROM_SERVER = 'P';
+    private final char GET_REMOVE_PLAYER_FROM_SERVER = 'Q';
+    private final char GET_GAMEOVER_FROM_SERVER = 'F';
+    private final char CHECK_IS_AWAITING = 'W';
+    //Command Map
+    private final Map<Character, String> COMMAND_MAP = new HashMap<Character, String>() {{
+        put(CHECK_IS_STARTED, "Check is the Game Started?");
+        put(START_THE_GAME, "Start the game now");
+        put(GET_ARRAY_FROM_SERVER,"Receive Board Array from the server");
+        put(GET_PLAYER_LIST_FROM_SERVER,"Receive Player Array List from the server");
+        put(GET_REMOVE_PLAYER_FROM_SERVER,"Receive Removed Player from the server");
+        put(GET_GAMEOVER_FROM_SERVER,"Receive Gameover from the server");
+        put(CHECK_IS_AWAITING,"Check is awaiting from the server");
+    }};
+
 
     private GameEngine(String ip, int port) {
         try {
@@ -67,28 +91,27 @@ public class GameEngine {
         receiverThread = new Thread(() -> {
             try {
                 while (true) { // handle it later
-                    char data = (char) dataInStream.read(); // get direction
-                    System.out.println(data);
+                    char data = getCharFromServer(); // get direction
 
                     switch (data) {
-                        case 'A': // server sent an array
+                        case GET_ARRAY_FROM_SERVER: // server sent an array
                             receiveArray(dataInStream); // use receiveArray to receive dataInputStream
                             break;
-                        case 'P': // server sent arrayList of players
+                        case GET_PLAYER_LIST_FROM_SERVER: // server sent arrayList of players
                             receivePlayerList(dataInStream);
                             break;
-                        case 'Q': // server sent remove player (Q = quit)
+                        case GET_REMOVE_PLAYER_FROM_SERVER: // server sent remove player (Q = quit)
                             // check if the dateInStream is already receiving the data from the server
                             removePlayer(dataInStream);
                             break;
-                        case 'F': // game is finished
-                            System.out.println("GameEngine.startReceiverThread::GameOver");
+                        case GET_GAMEOVER_FROM_SERVER: // game is finished
+                            log("GameEngine.startReceiverThread::GameOver");
                             if (getGameWindow()) {
                                 gameWindow.setIsGameOver(true);
                             }
                             break;
                         default:
-                            System.out.println(data);
+                            //Nothing
                     }
                 }
             } catch (IOException ex) { // handle it later
@@ -115,12 +138,16 @@ public class GameEngine {
 
     private void removePlayer(DataInputStream in) {
         try {
+            /*
             int len = in.readInt();
             byte[] data = new byte[len];
             in.read(data, 0, len);
             String playerName = new String(data, 0, len);
+             */
+            int len = readIntFromServer(in, "Player name length");
+            String playerName = readStringFromServer(in,"playerName",new byte[len],len);
 
-            System.out.println("GameEngine.removePlayer");
+            //log("GameEngine.removePlayer");
 
 //            GameWindow win = null;
 //            while (win == null) {
@@ -129,6 +156,7 @@ public class GameEngine {
 //            }
             if (getGameWindow()) {
                 gameWindow.removePlayerStat(playerName);
+                log("Client action: "+"Removed "+playerName);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -158,26 +186,39 @@ public class GameEngine {
 
     public void receivePlayerList(DataInputStream in) {
         try {
-            int len = in.readInt();
-            byte[] data = new byte[len];
-            in.read(data, 0, len);
-            String playerName = new String(data, 0, len);
+            //int len = in.readInt();
+            int len = readIntFromServer(in, "Player name length");
+            //byte[] data = new byte[len];
+            //in.read(data, 0, len);
+            //String playerName = new String(data, 0, len);
+            String playerName = readStringFromServer(in,"playerName",new byte[len],len);
 
+            /*
             int level = in.readInt();
             int score = in.readInt();
             int combo = in.readInt();
             int numberOfMoves = in.readInt();
             boolean isMyTurn = in.readBoolean();
             boolean isHost = in.readBoolean();
+            */
+            int level = readIntFromServer(in,"level");
+            int score = readIntFromServer(in,"score");
+            int combo = readIntFromServer(in,"combo");
+            int numberOfMoves = readIntFromServer(in,"numberOfMoves");
+            boolean isMyTurn = readBooleanFromServer(in,"isMyTurn");
+            boolean isHost = readBooleanFromServer(in,"isHost");
+            boolean isAwaitingPlayer = readBooleanFromServer(in,"isAwaitingPlayer");
 
-            System.out.println("GameEngine.receivePlayerList");
-            System.out.println("playerName = " + playerName);
-            System.out.println("level = " + level);
-            System.out.println("score = " + score);
-            System.out.println("combo = " + combo);
-            System.out.println("numberOfMoves = " + numberOfMoves);
-            System.out.println("isMyTurn = " + isMyTurn);
-            System.out.println("isHost = " + isHost);
+            /*
+            log("GameEngine.receivePlayerList");
+            log("playerName = " + playerName);
+            log("level = " + level);
+            log("score = " + score);
+            log("combo = " + combo);
+            log("numberOfMoves = " + numberOfMoves);
+            log("isMyTurn = " + isMyTurn);
+            log("isHost = " + isHost);
+            */
 
             Player player = new Player(playerName, null, level, score, numberOfMoves, combo);
             player.setMyTurn(isMyTurn);
@@ -193,6 +234,10 @@ public class GameEngine {
                     self.setNumberOfMoves(numberOfMoves);
                     self.setCombo(combo);
                     self.setMyTurn(isMyTurn);
+                    self.setAwaitingPlayer(isAwaitingPlayer);
+                }
+                if(gameWindow != null) {
+                    gameWindow.setIsAwaitingPlayer(isAwaitingPlayer);
                 }
             }
 
@@ -205,6 +250,8 @@ public class GameEngine {
 //            }
             if (getGameWindow()) {
                 gameWindow.insertPlayerStat(player);
+            }else{
+                log("TEST");
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -213,9 +260,13 @@ public class GameEngine {
 
     public void receiveArray(DataInputStream in) throws IOException {
         int size = in.readInt();
+        String boardStr = "[ ";
         for (int i = 0; i < size; i++) {
             board[i] = in.readInt();
+            boardStr += board[i]+" ";
         }
+        boardStr += "]";
+        log("Board = "+boardStr);
     }
 
     // /**
@@ -252,21 +303,22 @@ public class GameEngine {
      * @param dir
      */
     public void moveMerge(String dir) {
-        System.out.println(dir);
+        //log(dir);
 
         //Player self = playersList.stream().filter(p -> p.getPlayerName().equals(myName)).findFirst().get();
         if(self == null){
-            System.out.println("GameEngine.moveMerge:: Game haven't started.");
+            log("GameEngine.moveMerge:: Game haven't started.");
             return;
         }
 
         if (!self.isMyTurn()) {
-            System.out.println("GameEngine.moveMerge:: IS MY TURN == false");
+            log("GameEngine.moveMerge:: IS MY TURN == false");
             return;
         }
 
         // send the data to the server
         try {
+            log("Sending: "+ dir.charAt(0));
             dataOutStream.write(dir.charAt(0));
             dataOutStream.flush();
         } catch (IOException e) {
@@ -403,50 +455,147 @@ public class GameEngine {
 
     //20241122 Melody updated - Start
     public void gameStart() {
-        System.out.println("Try to start the game!");
-
         // send the data to the server
-        try {
-            dataOutStream.write('S');
-            dataOutStream.flush();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+
+            //dataOutStream.write('S');
+            //dataOutStream.flush();
+        sendToServer(START_THE_GAME);
+
     }
 
     public boolean checkGameStart() {
-        System.out.println("Is Game Started?");
-        boolean response = false;
         // send the data to the server
-        try {
-            //Before
-            System.out.println("1"+dataInStream.toString());
-            clearInputStream(dataInStream);
-            //After
-            System.out.println("2"+dataInStream.toString());
-            dataOutStream.write('C');
-            dataOutStream.flush();
-
-            response = dataInStream.readBoolean();
-            System.out.println("***"+response);
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        clearInputStream(dataInStream);
+        sendToServer(CHECK_IS_STARTED);
+        boolean response = readBooleanFromServer(dataInStream,"isGameStarted");
         return response;
     }
 
-    private static void clearInputStream(DataInputStream in) throws IOException {
-        while (in.available() > 0) {
-            in.skipBytes(in.available());
+    public boolean checkIsAwaiting() {
+        // send the data to the server
+        clearInputStream(dataInStream);
+        sendToServer(CHECK_IS_AWAITING);
+        boolean response = readBooleanFromServer(dataInStream,"isAwaiting");
+        return response;
+    }
+
+
+
+    public void getPlayerListRefresh() {
+        // send the data to the server
+        sendToServer(GET_PLAYER_LIST_FROM_SERVER);
+    }
+
+    private void clearInputStream(DataInputStream in){
+        try {
+            while (in.available() > 0) {
+                in.skipBytes(in.available());
+            }
+        } catch (IOException e) {
+        throw new RuntimeException(e);
+    }
+    }
+
+    private void sendToServer(char msg){
+        try {
+            log("Sending: "+msg+" ("+COMMAND_MAP.get(msg)+")");
+            dataOutStream.write(msg);
+            dataOutStream.flush();
+        }catch (IOException e){
+            log("Failed to send: "+msg+" ("+COMMAND_MAP.get(msg)+")");
         }
+    }
+
+    private char getCharFromServer(){
+        char result = '\0';
+        try {
+            result = (char) dataInStream.read();
+            log("Received: "+result+" ("+COMMAND_MAP.get(result)+")");
+            return result;
+        }catch (IOException e){
+            log("Failed to get char from server");
+        }
+        return result;
+    }
+
+    private int readIntFromServer(DataInputStream in, String dataName){
+        int result = -1;
+        try {
+            result = in.readInt();
+            log("Received: "+result+" ("+dataName+")");
+            return result;
+        }catch (IOException e){
+            log(getErrorMsgByData(dataName));
+        }
+        return result;
+    }
+
+    private boolean readBooleanFromServer(DataInputStream in, String dataName){
+        boolean result = false;
+        try {
+            result = in.readBoolean();
+            log("Received: "+result+" ("+dataName+")");
+            return result;
+        }catch (IOException e){
+            log(getErrorMsgByData(dataName));
+        }
+        return result;
+    }
+
+    private String readStringFromServer(DataInputStream in, String dataName,byte[] data, int len){
+        String result = "";
+        try {
+            in.read(data, 0, len);
+            result = new String(data, 0, len);
+            log("Received: "+result+" ("+dataName+")");
+            return result;
+        }catch (IOException e){
+            log(getErrorMsgByData(dataName));
+        }
+        return result;
+    }
+
+
+
+    public void gameRestart() {
+        log("Try to restart the game!");
+
+        // send the data to the server
+        try {
+            dataOutStream.write('E');
+            dataOutStream.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void log(String msg){
+        // Get current datetime
+        String dateTime = getCurrentDateTimeStr();
+        // Print log
+        String logMessage = dateTime + " - " + msg;
+        System.out.println(logMessage);
+    }
+
+    private void log(char msg){
+        log(""+msg);
+    }
+
+    private String getCurrentDateTimeStr(){
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String dateTime = sdf.format(new Date());
+        return dateTime;
+    }
+
+    private String getErrorMsgByData(String dataName){
+        return "Failed to get "+dataName+" from server";
     }
 
     //20241122 Melody updated - End
 
     /*
     public void getCurrentPlayerCount() {
-        System.out.println("Try to get current player count");
+        log("Try to get current player count");
         // send the data to the server
         try {
             dataOutStream.write('P');

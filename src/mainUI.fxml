@@ -26,8 +26,8 @@
             <MenuItem fx:id="startButton" mnemonicParsing="false" text="Start(Host only)" />
         </Menu>
     </MenuBar>
-    <ScrollPane vbarPolicy="NEVER">
-        <HBox fx:id="playerContainer" style="-fx-background-color: #a88;" prefHeight="115.0" minHeight="115.0" maxHeight="Infinity">
+    <ScrollPane vbarPolicy="NEVER" mouseTransparent="true">
+        <HBox fx:id="playerContainer" style="-fx-background-color: #a88;" prefHeight="130.0" minHeight="130.0" maxHeight="Infinity" >
 
         </HBox>
     </ScrollPane>

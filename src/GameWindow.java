@@ -27,7 +27,9 @@ import javafx.util.Duration;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Objects;
 
 public class GameWindow {
@@ -56,7 +58,9 @@ public class GameWindow {
     private final ArrayList<Player> playerArrayList = new ArrayList<>();
     private int currentPlayerCount = 0;
     private boolean isGameStart;
-    private boolean isAwaitingPlayer;
+    private boolean isAwaitingPlayer = false;
+    private boolean clickedWaitButton = false;
+    private String playerName="";
 
     private GameWindow(Stage stage, String ip, int port, String playerName) throws IOException {
         loadImages();
@@ -72,6 +76,7 @@ public class GameWindow {
         Scene scene = new Scene(root);
 
         this.stage = stage;
+        this.playerName = playerName;
 
         stage.setScene(scene);
         stage.setTitle("Battle Joker");
@@ -90,13 +95,21 @@ public class GameWindow {
 
         //TODO: Handle awaiting player
         isGameStart = gameEngine.checkGameStart();
-        System.out.println("testing for game window: " + isGameStart);
+        boolean isAwaitingPlayer = gameEngine.checkIsAwaiting();
 
-        if(isGameStart){
+        initCanvas();
+        gameStart();
+
+
+/*
+            if(!isGameStart){
+                gameEngine.getPlayerListRefresh();
+            }
+*/
+        gameEngine.getPlayerListRefresh();
+        if((isGameStart && isAwaitingPlayer) || playerArrayList.size() > 4){
             WaitOrLeaveDialog waitOrLeaveDialog = new WaitOrLeaveDialog(this);
         }
-            initCanvas();
-            gameStart();
 
     }
 
@@ -120,6 +133,7 @@ public class GameWindow {
     public void startGame(){
         //initCanvas();
         gameEngine.gameStart();
+        gameEngine.getPlayerListRefresh();
         //gameStart();
     }
 
@@ -147,6 +161,7 @@ public class GameWindow {
 
     private void gameStart() {
         animationTimer.start();
+        isGameOver = false;
     }
 
     private void loadImages() throws IOException {
@@ -239,7 +254,20 @@ public class GameWindow {
             statContainer.setPadding(new Insets(10.0, 10.0, 10.0, 10.0));
 
             playerContainer.getChildren().add(statContainer);
-            playerArrayList.add(player);
+            if(!player.isAwaitingPlayer()){
+                boolean isExistPlayer = false;
+                for(int i = 0; i < playerArrayList.size(); i++){
+                    Player tempPlayer = playerArrayList.get(i);
+                    if(tempPlayer.getPlayerName().equalsIgnoreCase(player.getPlayerName())){
+                        isExistPlayer = true;
+                        break;
+                    }
+                }
+                if(!isExistPlayer){
+                    playerArrayList.add(player);
+                }
+
+            }
             if(playerArrayList.size() > currentPlayerCount){
                 currentPlayerCount = playerArrayList.size();
             }
@@ -264,6 +292,27 @@ public class GameWindow {
                     }
                 }
             }
+        }
+    }
+
+    public void clearPlayerStat() {
+        for(int i = 0; i < playerArrayList.size(); i++){
+            Player player = playerArrayList.get(i);
+            removePlayerStat(player.getPlayerName());
+        }
+
+        for(int i = 0; i < playerArrayList.size(); i++){
+            playerArrayList.remove(i);
+        }
+
+        playerContainer.getChildren().clear();
+
+
+    }
+
+    public void refreshPlayerStat(){
+        for(int i = 0; i < playerArrayList.size(); i++){
+            updatePlayerTurn(playerArrayList.get(i));
         }
     }
 
@@ -330,12 +379,29 @@ public class GameWindow {
             public void handle(long now) {
                 render();
                 if (isGameOver) {
-                    System.out.println("Game Over!");
+                    log("Game Over!");
                     animationTimer.stop();
 
                     Platform.runLater(() -> {
                         try {
-                            new ScoreboardWindow(playerArrayList);
+                            for(int i = 0; i < playerArrayList.size(); i++){
+                                if(playerArrayList.get(i).getPlayerName().equalsIgnoreCase(playerName) && !clickedWaitButton){
+                                    new ScoreboardWindow(playerArrayList);
+                                }
+                            }
+
+                            //if(playerArrayList.size() > 4) {
+                            clearPlayerStat();
+                            //}
+
+
+                            gameEngine.gameRestart();
+                            gameStart();
+                            gameEngine.getPlayerListRefresh();
+
+                            clickedWaitButton = false;
+                            //refreshPlayerStat();
+
                         } catch (IOException ex) {
                             throw new RuntimeException(ex);
                         }
@@ -398,7 +464,7 @@ public class GameWindow {
     }
 
     void quit() {
-        System.out.println("Bye bye");
+        log("Bye bye");
         stage.close();
         System.exit(0);
     }
@@ -415,6 +481,30 @@ public class GameWindow {
     public boolean getIsGameStarted(){
         return this.isGameStart;
     }
+
+    //2024-11-23 Melody update - Start
+    private void log(String msg){
+        // Get current datetime
+        String dateTime = getCurrentDateTimeStr();
+        // Print log
+        String logMessage = dateTime + " - " + msg;
+        System.out.println(logMessage);
+    }
+
+    private void log(char msg){
+        log(""+msg);
+    }
+
+    private String getCurrentDateTimeStr(){
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        String dateTime = sdf.format(new Date());
+        return dateTime;
+    }
+
+    public void setClickedWaitButton(boolean clickedWaitButton){
+        this.clickedWaitButton = clickedWaitButton;
+    }
+    //2024-11-23 Melody update - End
 
 
 }
