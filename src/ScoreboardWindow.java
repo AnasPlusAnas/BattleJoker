@@ -41,7 +41,7 @@ public class ScoreboardWindow {
         stage.setMinHeight(scene.getHeight());
 
         setFont(14);
-        scoreList.getItems().clear();
+       // scoreList.getItems().clear();
         showRecentGame(playerList);
         // updateList();
         showTop10Btn.setOnMouseClicked(this::OnButtonClick);

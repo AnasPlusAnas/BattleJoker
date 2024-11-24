@@ -386,11 +386,11 @@ public class GameWindow {
 
                     Platform.runLater(() -> {
                         try {
-                            for(int i = 0; i < playerArrayList.size(); i++){
-                                if(playerArrayList.get(i).getPlayerName().equalsIgnoreCase(playerName) && !clickedWaitButton){
+                            //for(int i = 0; i < playerArrayList.size(); i++){
+                              //  if(playerArrayList.get(i).getPlayerName().equalsIgnoreCase(playerName) && !clickedWaitButton){
                                     new ScoreboardWindow(playerArrayList);
-                                }
-                            }
+                              //  }
+                          //  }
 
                             //if(playerArrayList.size() > 4) {
 
