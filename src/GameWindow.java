@@ -441,8 +441,12 @@ public class GameWindow {
 
                 v = gameEngine.getValue(i, j);
 
-                if (v > 0) // if a card is in the place, draw it
+                //if (v > 0) // if a card is in the place, draw it
+                if (v >= 0 && v < images.length) {
                     gc.drawImage(images[v], x + padding, y + padding, cardSize, cardSize);
+                }else{
+                    log("Client error: gc.drawImage.images[v] out of bound, i=" + i + ", j=" + j + ", v=" + v);
+                }
 
                 x += blockSize;
             }

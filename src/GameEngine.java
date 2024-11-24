@@ -205,7 +205,7 @@ public class GameEngine {
                 } catch (Exception e) {
                     //Do nothing
                 }
-                clearInputStream(in);
+                //clearInputStream(in);
                 getPlayerListRefresh();
                 return;
             }
@@ -285,6 +285,9 @@ public class GameEngine {
 
     public void receiveArray(DataInputStream in) throws IOException {
         int size = in.readInt();
+        if(size >= 16){
+            log("DEBUG BOARD SIZE: "+size);
+        }
         String boardStr = "[ ";
         for (int i = 0; i < size; i++) {
             board[i] = in.readInt();
@@ -449,6 +452,14 @@ public class GameEngine {
 
     public int getValue(int r, int c) {
         synchronized (board) {
+            String boardStr = "DEBUG Board = [ ";
+            if(board[r * SIZE + c] >= 16){
+                for(int i = 0; i < board.length; i++){
+                    boardStr += board[i]+" ";
+                }
+                boardStr += "]";
+                log("***DEBUG BOARD VALUE = "+boardStr);
+            }
             return board[r * SIZE + c];
         }
     }
