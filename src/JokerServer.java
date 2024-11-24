@@ -494,10 +494,15 @@ public class JokerServer {
     public void undoPuzzle() {
         // board = clonedBoard.clone();
         System.arraycopy(clonedBoard, 0, board, 0, board.length);
-        if (currentPlayer.getScore() != 0 && currentPlayer.getCombo() != 0 && currentPlayer.getNumberOfMoves() != 0) {
-            currentPlayer.setScore(getScore() - 1);
-            currentPlayer.setCombo(getCombo() - 1);
+        if (currentPlayer.getNumberOfMoves() != 0) {
+            if (currentPlayer.getScore() != 0) {
+                currentPlayer.setScore(getScore() - 1);
+            }
+            if (currentPlayer.getCombo() != 0) {
+                currentPlayer.setCombo(getCombo() - 1);
+            }
             currentPlayer.setNumberOfMoves(currentPlayer.getNumberOfMoves() - 1);
+            totalMoveCount--;
         }
     }
 
