@@ -21,7 +21,11 @@ public class ScoreboardWindow {
     ListView<String> scoreList;
 
     @FXML
-    Button showTop10;
+    Button showTop10Btn;
+    @FXML
+    Button showRecentBtn;
+
+    private ArrayList<Player> recentGameList;
 
 
     public ScoreboardWindow(ArrayList<Player> playerList) throws IOException {
@@ -40,17 +44,19 @@ public class ScoreboardWindow {
         scoreList.getItems().clear();
         showRecentGame(playerList);
         // updateList();
-        showTop10.setOnMouseClicked(this::OnButtonClick);
+        showTop10Btn.setOnMouseClicked(this::OnButtonClick);
+        showRecentBtn.setOnMouseClicked(this::onShowRecentClick);
 
         stage.showAndWait();
     }
 
     private void OnButtonClick(Event event) {
         updateList();
-        showTop10.setVisible(false);
     }
 
     public void showRecentGame(ArrayList<Player> playerList) {
+        recentGameList = playerList;
+
         try {
             ObservableList<String> items = FXCollections.observableArrayList();
             playerList.forEach(data->{
@@ -62,6 +68,11 @@ public class ScoreboardWindow {
             ex.printStackTrace();
         }
     }
+
+    private void onShowRecentClick(Event event){
+        showRecentGame(recentGameList);
+    }
+
 
 
     private void setFont(int fontSize) {

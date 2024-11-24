@@ -13,7 +13,12 @@
             <Font size="28.0" />
          </font>
       </Label>
-    <Button fx:id="showTop10" text="Show Top 10"  prefWidth="Infinity">
+    <Button fx:id="showTop10Btn" text="Show Top 10"  prefWidth="Infinity">
+        <font>
+            <Font size="17.0"/>
+        </font>
+    </Button>
+    <Button fx:id="showRecentBtn" text="Show Recent Game"  prefWidth="Infinity">
         <font>
             <Font size="17.0"/>
         </font>

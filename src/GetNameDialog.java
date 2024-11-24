@@ -82,7 +82,7 @@ public class GetNameDialog {
 
             stage.close();
         }
-        errorLabel.setText("One or more input(s) are empty.");
+        errorLabel.setText("One or more input(s) are invalid.");
     }
 
     public String getPlayername() {
