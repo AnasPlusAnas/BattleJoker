@@ -378,8 +378,9 @@ public class GameWindow {
             @Override
             public void handle(long now) {
                 render();
+
                 if (isGameOver) {
-                    log("Game Over!");
+                    log("Client log: Game Over!");
                     animationTimer.stop();
 
                     Platform.runLater(() -> {
@@ -464,7 +465,8 @@ public class GameWindow {
     }
 
     void quit() {
-        log("Bye bye");
+        //log("Bye bye");
+        log("Client log: Disconnected");
         stage.close();
         System.exit(0);
     }
@@ -483,17 +485,6 @@ public class GameWindow {
     }
 
     //2024-11-23 Melody update - Start
-    private void log(String msg){
-        // Get current datetime
-        String dateTime = getCurrentDateTimeStr();
-        // Print log
-        String logMessage = dateTime + " - " + msg;
-        System.out.println(logMessage);
-    }
-
-    private void log(char msg){
-        log(""+msg);
-    }
 
     private String getCurrentDateTimeStr(){
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -503,6 +494,14 @@ public class GameWindow {
 
     public void setClickedWaitButton(boolean clickedWaitButton){
         this.clickedWaitButton = clickedWaitButton;
+    }
+
+    public void log(String msg){
+        gameEngine.log(msg);
+    }
+
+    public void log(char msg){
+        gameEngine.log(msg);
     }
     //2024-11-23 Melody update - End
 

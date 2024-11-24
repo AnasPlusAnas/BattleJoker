@@ -45,7 +45,36 @@ public class JokerServer {
         System.out.printf(str, o);
     }
 
-
+    //Command
+    private final char CHECK_IS_STARTED = 'C';
+    private final char START_THE_GAME = 'S';
+    private final char SEND_ARRAY_FROM_SERVER = 'A';
+    private final char SEND_PLAYER_LIST_FROM_SERVER = 'P';
+    private final char SEND_REMOVE_PLAYER_FROM_SERVER = 'Q';
+    private final char SEND_GAMEOVER_FROM_SERVER = 'F';
+    private final char CHECK_IS_AWAITING = 'W';
+    private final char REQUEST_RESTART_THE_GAME = 'E';
+    private final char ACTION_UP = 'U';
+    private final char ACTION_DOWN = 'D';
+    private final char ACTION_LEFT = 'L';
+    private final char ACTION_RIGHT = 'R';
+    private final char ACTION_UNDO = 'N';
+    //Command Map
+    private final Map<Character, String> COMMAND_MAP = new HashMap<Character, String>() {{
+        put(CHECK_IS_STARTED, "Check is the Game Started?");
+        put(START_THE_GAME, "Start the game now");
+        put(SEND_ARRAY_FROM_SERVER,"Send Board Array to the client");
+        put(SEND_PLAYER_LIST_FROM_SERVER,"Send Player Array List to the client");
+        put(SEND_REMOVE_PLAYER_FROM_SERVER,"Send Removed Player to the client");
+        put(SEND_GAMEOVER_FROM_SERVER,"Send Gameover to the client");
+        put(CHECK_IS_AWAITING,"Check is awaiting from the server");
+        put(REQUEST_RESTART_THE_GAME,"Restart the game");
+        put(ACTION_UP,"ACTION_UP");
+        put(ACTION_DOWN,"ACTION_DOWN");
+        put(ACTION_LEFT,"ACTION_LEFT");
+        put(ACTION_RIGHT,"ACTION_RIGHT");
+        put(ACTION_UNDO,"ACTION_UNDO");
+    }};
 
     public JokerServer(int port) throws IOException {
         log("Joker Server has started");
@@ -79,10 +108,15 @@ public class JokerServer {
 
                         synchronized (clientList) {
                             clientList.remove(clientSocket); // remove the client from the socketList
-
                             Player playerToRemove = playerList.stream().filter(p -> p.getSocket() == clientSocket)
                                     .findFirst()
                                     .orElse(null);
+
+                            if(playerToRemove == null){
+                                playerToRemove = awaitingPlayerList.stream().filter(p -> p.getSocket() == clientSocket)
+                                        .findFirst()
+                                        .orElse(null);
+                            }
 
                             synchronized (playerList) {
                                 // Check if the player to remove is the current player
@@ -119,7 +153,7 @@ public class JokerServer {
 
     private void serve(Socket clientSocket) throws IOException {
         // proof client connect successfully
-        log("Established a connection: "+clientSocket);
+        log("Server action: Established a connection: "+clientSocket);
 
         // start receiving the moves from client. (GameEngine.java, moveMerge())
         BufferedInputStream bufferedInputStream = new BufferedInputStream(clientSocket.getInputStream());
@@ -136,13 +170,23 @@ public class JokerServer {
         //20241122 Melody updated - Start
         // add the player to the playerList
         synchronized (playerList) {
+            if(isGameStarted && playerList.size() == 0){
+                endGameAction();
+            }
+
             if(isGameStarted) {
                 player.setAwaitingPlayer(true);
                 awaitingPlayerList.add(player);
+                String awaitingPlayerListStr = "[ ";
+                for(int i = 0; i < awaitingPlayerList.size(); i++){
+                    awaitingPlayerListStr += awaitingPlayerList.get(i).getPlayerName()+" ";
+                }
+                awaitingPlayerListStr += "]";
+                log("Server log: awaitingPlayerListStr = "+awaitingPlayerListStr);
             }else {
                 playerList.add(player);
             }
-            log("Added new player: "+player);
+            log("Server action: Added new player: "+player);
             //20241122 Melody updated - End
 
             // if the first player, the player who started the game, he gets to play first.
@@ -182,10 +226,15 @@ public class JokerServer {
         while (true) {
             char direction = (char) inputStream.read();
 
-            log("***BEFORE MOVE:"+totalMoveCount);
             //log("ClientSocket:"+clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction
             //                + "\n*** " + clientSocket);
-            log("Command = "+direction+" (requested by "+getPlayerBySocket(clientSocket)+")");
+            //log("Command = "+direction+" (requested by "+getPlayerBySocket(clientSocket)+")");
+            Player requestPlayer = getPlayerBySocket(clientSocket);
+            if(requestPlayer == null){
+                requestPlayer = getAwaitingPlayerBySocket(clientSocket);
+            }
+            log("Received: "+direction+" ("+ COMMAND_MAP.get(direction) +", requested by "+requestPlayer+")");
+
 
             //20241122 Melody updated - Start
 
@@ -195,7 +244,7 @@ public class JokerServer {
             }
 
 
-            if(direction == 'E' && !restartFlag){
+            if(direction == REQUEST_RESTART_THE_GAME && !restartFlag){
                 //DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                 //log("Restarting the game");
 
@@ -249,14 +298,15 @@ public class JokerServer {
 
             }
 
-            if(direction == 'C'){
+            if(direction == CHECK_IS_STARTED){
                 //DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-                _out.writeBoolean(isGameStarted);
-                log("Return isGameStarted = "+isGameStarted);
+                //_out.writeBoolean(isGameStarted);
+                sendBooleanToClient(_out,isGameStarted,"isGameStarted");
+                //log("Return isGameStarted = "+isGameStarted);
                 continue;
             }
 
-            if(direction == 'W'){
+            if(direction == CHECK_IS_AWAITING){
                 boolean isAwaitingPlayer = false;
                 Player tempPlayer = getPlayerBySocket(clientSocket);
 
@@ -265,8 +315,9 @@ public class JokerServer {
                 }else{
                     isAwaitingPlayer = true;
                 }
-                _out.writeBoolean(isAwaitingPlayer);
-                log("Return isAwaitingPlayer = "+isAwaitingPlayer);
+                //_out.writeBoolean(isAwaitingPlayer);
+                //log("Return isAwaitingPlayer = "+isAwaitingPlayer);
+                sendBooleanToClient(_out,isAwaitingPlayer, "isAwaitingPlayer");
                 continue;
             }
 
@@ -276,12 +327,6 @@ public class JokerServer {
                 if(awaitingCurrentPlayer == null){
                     continue;
                 }
-                // TODO handle awaiting player
-                // Code here:
-
-
-            }else{
-                log("CurrentPlayer = "+currentPlayer.getPlayerName());
             }
             //20241122 Melody updated - End
 
@@ -293,7 +338,7 @@ public class JokerServer {
             */
 
             //20241122 Melody updated - Start
-            if(direction == 'S' && currentPlayer.isHost() && !isGameStarted){
+            if(direction == START_THE_GAME && currentPlayer.isHost() && !isGameStarted){
                 startNewGame();
             }
 
@@ -303,7 +348,7 @@ public class JokerServer {
 
             //20241122 Melody updated - End
 
-            if (direction == 'N') {
+            if (direction == ACTION_UNDO) {
                 if (currentPlayer.getUndoFlag() && (totalMoveCount > 0 ||  (totalMoveCount == 0 && playerList.size() == 1))) {
                         if (lastPlayer != null && lastPlayer.getSocket().equals(currentPlayer.getSocket())) {
                         undoPuzzle();
@@ -330,7 +375,6 @@ public class JokerServer {
            /// if (!isGameStarted) return;
             moveMerge("" + direction);
 
-            log("***AFTER MOVE:"+totalMoveCount);
 
             // if nextRound = true then the game is still not over, else the game is over
             //gameOver = !nextRound();
@@ -353,45 +397,75 @@ public class JokerServer {
     }
 
     private void sendRemovedPlayer(Player player) throws IOException {
+        if(player == null){
+            return;
+        }
         for (Socket client : clientList) {
             log("JokerServer.sendRemovedPlayer");
             log("player = " + player.getPlayerName());
 
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
 
-            out.write('Q');
+            //out.write('Q');
+            sendToClient(out,SEND_REMOVE_PLAYER_FROM_SERVER);
             byte[] bytes = player.getPlayerName().getBytes();
-            out.writeInt(bytes.length);
-            out.write(bytes);
-
-            out.flush();
+            //out.writeInt(bytes.length);
+            sendIntToClient(out,bytes.length, "bytes.length");
+            //out.write(bytes);
+            sendBytesToClient(out,bytes,"bytes");
+            //HERE
+            //out.flush();
         }
     }
 
     private void sendPlayerList() throws IOException {
         for (Socket client : clientList) {
-            log("JokerServer.sendPlayerList");
+            //log("JokerServer.sendPlayerList");
 
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
+
+            String playerListStr = "[ ";
 
             for (Player player : playerList) {
                 if(player.isAwaitingPlayer()){
                     continue;
                 }
-                out.write('P');
+                //out.write(SEND_PLAYER_LIST_FROM_SERVER);
+                sendToClient(out,SEND_PLAYER_LIST_FROM_SERVER);
                 byte[] bytes = player.getPlayerName().getBytes();
-                out.writeInt(bytes.length);
-                out.write(bytes);
-                out.writeInt(player.getLevel());
-                out.writeInt(player.getScore());
-                out.writeInt(player.getCombo());
-                out.writeInt(player.getNumberOfMoves());
-                out.writeBoolean(player.isMyTurn());
-                out.writeBoolean(player.isHost());
-                out.writeBoolean(player.isAwaitingPlayer());
-                out.flush();
-                log("Sending: "+player);
+                //out.writeInt(bytes.length);
+                sendIntToClient(out,bytes.length,"bytes.length");
+                //out.write(bytes);
+                sendBytesToClient(out,bytes,"bytes");
+                log("Sending: "+player.getPlayerName()+" (Player name)");
+                //out.writeInt(player.getLevel());
+                sendIntToClient(out,player.getLevel(),"player.getLevel()");
+                //out.writeInt(player.getScore());
+                sendIntToClient(out,player.getScore(),"player.getScore()");
+                //out.writeInt(player.getCombo());
+                sendIntToClient(out, player.getCombo(),"player.getCombo()");
+                //out.writeInt(player.getNumberOfMoves());
+                sendIntToClient(out,player.getNumberOfMoves(),"player.getNumberOfMoves()");
+                //out.writeBoolean(player.isMyTurn());
+                sendBooleanToClient(out,player.isMyTurn(),"player.isMyTurn()");
+                //out.writeBoolean(player.isHost());
+                sendBooleanToClient(out,player.isHost(),"player.isHost()");
+                //out.writeBoolean(player.isAwaitingPlayer());
+                sendBooleanToClient(out,player.isAwaitingPlayer(),"player.isAwaitingPlayer()");
+                //out.flush();
+                //log("Sending: "+player);
+                playerListStr += player.getPlayerName()+" ";
             }
+            playerListStr += "]";
+            log("Player List = "+playerListStr);
+
+
+            String awaitingPlayerListStr = "[ ";
+            for(int i = 0; i < awaitingPlayerList.size(); i++){
+                awaitingPlayerListStr += awaitingPlayerList.get(i).getPlayerName()+" ";
+            }
+            awaitingPlayerListStr += "]";
+            log("Awaiting Player List = "+awaitingPlayerListStr);
         }
     }
 
@@ -400,8 +474,9 @@ public class JokerServer {
             log("JokerServer.sendGameOver");
 
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
-            out.write('F');
-            out.flush();
+            //out.write('F');
+            //out.flush();
+            sendToClient(out,SEND_GAMEOVER_FROM_SERVER);
         }
     }
 
@@ -435,13 +510,99 @@ public class JokerServer {
         lastPlayer = currentPlayer.clone();
     }
 
+    private void sendToClient(DataOutputStream out, char msg){
+        try {
+            log("Sending: "+msg+" ("+COMMAND_MAP.get(msg)+")");
+            out.write(msg);
+            out.flush();
+        }catch (IOException e){
+            log("Failed to send: "+msg+" ("+COMMAND_MAP.get(msg)+")");
+        }
+    }
+
+    private void sendBytesToClient(DataOutputStream out, byte[] msg){
+        try {
+            log("Sending: "+msg+" ("+COMMAND_MAP.get(msg)+")");
+            out.write(msg);
+            out.flush();
+        }catch (IOException e){
+            log("Failed to send: "+msg+" ("+COMMAND_MAP.get(msg)+")");
+        }
+    }
+
+    private void sendIntToClient(DataOutputStream out, int msg){
+        try {
+            log("Sending: "+msg+" ("+COMMAND_MAP.get(msg)+")");
+            out.writeInt(msg);
+            out.flush();
+        }catch (IOException e){
+            log("Failed to send: "+msg+" ("+COMMAND_MAP.get(msg)+")");
+        }
+    }
+
+    private void sendBooleanToClient(DataOutputStream out, boolean msg){
+        try {
+            log("Sending: "+msg+" ("+COMMAND_MAP.get(msg)+")");
+            out.writeBoolean(msg);
+            out.flush();
+        }catch (IOException e){
+            log("Failed to send: "+msg+" ("+COMMAND_MAP.get(msg)+")");
+        }
+    }
+
+    private void sendToClient(DataOutputStream out, char msg, String dataName){
+        try {
+            log("Sending: "+msg+" ("+dataName+")");
+            out.write(msg);
+            out.flush();
+        }catch (IOException e){
+            log("Failed to send: "+msg+" ("+dataName+")");
+        }
+    }
+
+    private void sendBytesToClient(DataOutputStream out, byte[] msg, String dataName){
+        try {
+            log("Sending: "+msg+" ("+dataName+")");
+            out.write(msg);
+            out.flush();
+        }catch (IOException e){
+            log("Failed to send: "+msg+" ("+dataName+")");
+        }
+    }
+
+    private void sendIntToClient(DataOutputStream out, int msg, String dataName){
+        try {
+            log("Sending: "+msg+" ("+dataName+")");
+            out.writeInt(msg);
+            out.flush();
+        }catch (IOException e){
+            log("Failed to send: "+msg+" ("+dataName+")");
+        }
+    }
+
+    private void sendBooleanToClient(DataOutputStream out, boolean msg, String dataName){
+        try {
+            log("Sending: "+msg+" ("+dataName+")");
+            out.writeBoolean(msg);
+            out.flush();
+        }catch (IOException e){
+            log("Failed to send: "+msg+" ("+dataName+")");
+        }
+    }
+
     public void sendPuzzle(DataOutputStream out) throws IOException { // handle later
-        out.write('A'); // going to send out an array to client
-        out.writeInt(board.length); // size of array
+        //out.write('A'); // going to send out an array to client
+        sendToClient(out,SEND_ARRAY_FROM_SERVER);
+        //out.writeInt(board.length); // size of array
+        sendIntToClient(out,board.length,"board.length");
+        String boardStr = "[ ";
         for (int i : board) {
             out.writeInt(i); // send the value to the array
+            boardStr += i+" " ;
         }
+        boardStr += "]";
         out.flush(); // force java to send the data out
+        log("Sending: Board = "+boardStr);
         // try {
         // Thread.sleep(1000);
         // } catch (InterruptedException e) {
@@ -502,7 +663,6 @@ public class JokerServer {
                             sendPlayerList();
                             sendGameOver();
                             gameOver = false;
-                            restartFlag = false;
 /*
                             synchronized (clientList) {
                                 for (Socket socket : clientList) {
@@ -548,7 +708,8 @@ public class JokerServer {
         score = currentPlayer.getScore();
         combo = currentPlayer.getCombo();
 
-        log("Player index = "+nextPlayerIndex);
+        //log("Player index = "+nextPlayerIndex);
+        log("Server action: Updated currentPlayer = "+currentPlayer.getPlayerName()+"(Player Index = "+nextPlayerIndex+")");
     }
 
     /**
@@ -727,6 +888,12 @@ public class JokerServer {
                 removedList.add(player);
                 player.setAwaitingPlayer(true);
                 awaitingPlayerList.add(player);
+                String awaitingPlayerListStr = "[ ";
+                for(int j = 0; j < awaitingPlayerList.size(); j++){
+                    awaitingPlayerListStr += awaitingPlayerList.get(j).getPlayerName()+" ";
+                }
+                awaitingPlayerListStr += "]";
+                log("Server log: awaitingPlayerListStr = "+awaitingPlayerListStr);
             }
 
             for(int i = 0; i < removedList.size(); i++){
@@ -789,7 +956,7 @@ public class JokerServer {
         }
         //For DEBUG
         for(int i = 0; i < playerList.size(); i++){
-            //log("***DEBUG: "+playerList.get(i).getPlayerName()+"/HOST:"+playerList.get(i).isHost()+"/TURN:"+playerList.get(i).isMyTurn());
+
             Player player = playerList.get(i);
             player.resetPlayerStatus();
             if(i == 0){
@@ -814,6 +981,7 @@ public class JokerServer {
          */
         nextRound();
         isGameStarted = true;
+        restartFlag = false;
         nextPlayerIndex = 0;
     }
 

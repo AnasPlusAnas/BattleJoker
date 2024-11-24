@@ -116,7 +116,7 @@ public class WaitOrLeaveDialog {
 */
     @FXML
     void OnButtonClickWait(Event event) {
-        System.out.println("Wait");
+        gameWindow.log("Client Action: Clicked Wait Button in Wait Or Leave Dialog");
         gameWindow.clearPlayerStat();
         gameWindow.setClickedWaitButton(true);
         stage.close();
@@ -124,7 +124,7 @@ public class WaitOrLeaveDialog {
 
     @FXML
     void OnButtonClickLeave(Event event) {
-        System.out.println("Leave");
+        gameWindow.log("Client Action: Clicked Leave Button in Wait Or Leave Dialog");
         gameWindow.quit();
         //stage.close();
     }

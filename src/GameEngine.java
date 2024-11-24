@@ -2,6 +2,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -43,6 +44,10 @@ public class GameEngine {
     private final char GET_GAMEOVER_FROM_SERVER = 'F';
     private final char CHECK_IS_AWAITING = 'W';
     private final char REQUEST_RESTART_THE_GAME = 'E';
+    private final char ACTION_UP = 'U';
+    private final char ACTION_DOWN = 'D';
+    private final char ACTION_LEFT = 'L';
+    private final char ACTION_RIGHT = 'R';
     //Command Map
     private final Map<Character, String> COMMAND_MAP = new HashMap<Character, String>() {{
         put(CHECK_IS_STARTED, "Check is the Game Started?");
@@ -53,6 +58,10 @@ public class GameEngine {
         put(GET_GAMEOVER_FROM_SERVER,"Receive Gameover from the server");
         put(CHECK_IS_AWAITING,"Check is awaiting from the server");
         put(REQUEST_RESTART_THE_GAME,"Request the server to restart the game");
+        put(ACTION_UP,"ACTION_UP");
+        put(ACTION_DOWN,"ACTION_DOWN");
+        put(ACTION_LEFT,"ACTION_LEFT");
+        put(ACTION_RIGHT,"ACTION_RIGHT");
     }};
 
 
@@ -107,7 +116,7 @@ public class GameEngine {
                             removePlayer(dataInStream);
                             break;
                         case GET_GAMEOVER_FROM_SERVER: // game is finished
-                            log("GameEngine.startReceiverThread::GameOver");
+                            log("Client log: GameEngine.startReceiverThread::GameOver");
                             if (getGameWindow()) {
                                 gameWindow.setIsGameOver(true);
                             }
@@ -190,6 +199,16 @@ public class GameEngine {
         try {
             //int len = in.readInt();
             int len = readIntFromServer(in, "Player name length");
+            if(len > 1000){
+                try{
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    //Do nothing
+                }
+                clearInputStream(in);
+                getPlayerListRefresh();
+                return;
+            }
             //byte[] data = new byte[len];
             //in.read(data, 0, len);
             //String playerName = new String(data, 0, len);
@@ -210,6 +229,12 @@ public class GameEngine {
             boolean isMyTurn = readBooleanFromServer(in,"isMyTurn");
             boolean isHost = readBooleanFromServer(in,"isHost");
             boolean isAwaitingPlayer = readBooleanFromServer(in,"isAwaitingPlayer");
+
+            if(level > 1000 || score > 1000 || combo > 1000 || numberOfMoves > 1000){
+                clearInputStream(in);
+                getPlayerListRefresh();
+                return;
+            }
 
             /*
             log("GameEngine.receivePlayerList");
@@ -252,8 +277,6 @@ public class GameEngine {
 //            }
             if (getGameWindow()) {
                 gameWindow.insertPlayerStat(player);
-            }else{
-                log("TEST");
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -268,7 +291,7 @@ public class GameEngine {
             boardStr += board[i]+" ";
         }
         boardStr += "]";
-        log("Board = "+boardStr);
+        log("Received: Board = "+boardStr);
     }
 
     // /**
@@ -309,23 +332,22 @@ public class GameEngine {
 
         //Player self = playersList.stream().filter(p -> p.getPlayerName().equals(myName)).findFirst().get();
         if(self == null){
-            log("GameEngine.moveMerge:: Game haven't started.");
+            log("Client log: GameEngine.moveMerge:: Game haven't started.");
             return;
         }
 
         if (!self.isMyTurn()) {
-            log("GameEngine.moveMerge:: IS MY TURN == false");
+            log("Client log: GameEngine.moveMerge::self.isMyTurn() == false");
             return;
         }
 
         // send the data to the server
-        try {
-            log("Sending: "+ dir.charAt(0));
-            dataOutStream.write(dir.charAt(0));
-            dataOutStream.flush();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+
+        //log("Sending: "+ dir.charAt(0));
+        sendToServer(dir.charAt(0));
+        //dataOutStream.write(dir.charAt(0));
+        //dataOutStream.flush();
+
 
         // synchronized (board) {
         // if (actionMap.containsKey(dir)) {
@@ -489,13 +511,34 @@ public class GameEngine {
     }
 
     private void clearInputStream(DataInputStream in){
+
+            try {
+                while (in.available() > 0) {
+                    in.skipBytes(in.available());
+                }
+            } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+        /*
         try {
-            while (in.available() > 0) {
-                in.skipBytes(in.available());
-            }
+            // 跳過所有剩餘的字節
+            in.skip(in.available());
         } catch (IOException e) {
-        throw new RuntimeException(e);
+            throw new RuntimeException(e);
+        }
+*/
+
     }
+
+    private void clearInputStream(){
+        try {
+            dataInStream.close();
+            dataInStream = new DataInputStream(clientSocket.getInputStream());
+        }catch (Exception e){
+            //Do nothing
+        }
     }
 
     private void sendToServer(char msg){
@@ -547,8 +590,10 @@ public class GameEngine {
     private String readStringFromServer(DataInputStream in, String dataName,byte[] data, int len){
         String result = "";
         try {
-            in.read(data, 0, len);
-            result = new String(data, 0, len);
+            //in.read(data, 0, len);
+            in.readFully(data, 0, len);
+            //result = new String(data, 0, len);
+            result = new String(data, 0, len, StandardCharsets.UTF_8);
             log("Received: "+result+" ("+dataName+")");
             return result;
         }catch (IOException e){
@@ -570,7 +615,7 @@ public class GameEngine {
 
     }
 
-    private void log(String msg){
+    public void log(String msg){
         // Get current datetime
         String dateTime = getCurrentDateTimeStr();
         // Print log
@@ -578,7 +623,7 @@ public class GameEngine {
         System.out.println(logMessage);
     }
 
-    private void log(char msg){
+    public void log(char msg){
         log(""+msg);
     }
 
