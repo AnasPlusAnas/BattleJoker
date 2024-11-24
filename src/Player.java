@@ -12,7 +12,6 @@ public class Player implements Serializable {
     private int numberOfMoves;
     private Socket socket;
     private boolean undoFlag;
-
     private boolean isMyTurn;
 
     private boolean isAwaitingPlayer;
@@ -78,7 +77,7 @@ public class Player implements Serializable {
     }
 
     public boolean getUndoFlag(){
-        return undoFlag;
+        return this.undoFlag;
     }
 
     public void setUndoFlag(boolean undoFlag){
@@ -110,6 +109,15 @@ public class Player implements Serializable {
 
     public boolean isAwaitingPlayer() {
         return this.isAwaitingPlayer;
+    }
+
+    public Player clone(){
+        Player clonePlayer = new Player(this.playerName, this.socket, this.level, this.score, this.numberOfMoves, this.combo);
+        clonePlayer.setUndoFlag(this.undoFlag);
+        clonePlayer.setHost(this.isHost);
+        clonePlayer.setMyTurn(this.isMyTurn);
+        clonePlayer.setAwaitingPlayer(this.isAwaitingPlayer);
+        return clonePlayer;
     }
 
     public String toString(){

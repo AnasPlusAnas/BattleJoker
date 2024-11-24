@@ -13,6 +13,7 @@ public class JokerServer {
     private final ArrayList<Player> playerList = new ArrayList<>(); // remember all the client
     private final ArrayList<Player> awaitingPlayerList = new ArrayList<>(); // remember all the client
 
+
     // client
     // game setting
     public static final int LIMIT = 14;
@@ -33,6 +34,7 @@ public class JokerServer {
     private int totalMoveCount;
     private int numOfTilesMoved;
     private Player currentPlayer = null;
+    private Player lastPlayer = null;
     private int nextPlayerIndex = 0;
     private boolean restartFlag = false;
 
@@ -179,6 +181,8 @@ public class JokerServer {
 
         while (true) {
             char direction = (char) inputStream.read();
+
+            log("***BEFORE MOVE:"+totalMoveCount);
             //log("ClientSocket:"+clientSocket.getInetAddress().toString() + ":" + clientSocket.getPort() + "= " + direction
             //                + "\n*** " + clientSocket);
             log("Command = "+direction+" (requested by "+getPlayerBySocket(clientSocket)+")");
@@ -299,23 +303,34 @@ public class JokerServer {
 
             //20241122 Melody updated - End
 
-//            if (direction == 'N' && false) {
-//                if (currentPlayer.getUndoFlag() && totalMoveCount != 0) {
-//                    undoPuzzle();
-//                    currentPlayer.setUndoFlag(false);
-//                    synchronized (playerList) {
-//                        sendPlayerList();
-//                    }
-//
-//                    synchronized (clientList) {
-//                        sendPuzzle(_out);
-//                    }
-//                }
-//            }
+            if (direction == 'N') {
+                if (currentPlayer.getUndoFlag() && (totalMoveCount > 0 ||  (totalMoveCount == 0 && playerList.size() == 1))) {
+                        if (lastPlayer != null && lastPlayer.getSocket().equals(currentPlayer.getSocket())) {
+                        undoPuzzle();
+                        undoPlayer();
+
+                        //currentPlayer.setUndoFlag(false);
+                        synchronized (playerList) {
+                            sendPlayerList();
+                        }
+
+                        for (Socket socket : clientList) {
+                            DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
+
+                            sendPuzzle(out);
+
+                        }
+                }
+            }
+                continue;
+            }
 
             cloneBoard(); // cloned the board before move
+            clonePlayer(); // cloned the playerlist before move
            /// if (!isGameStarted) return;
             moveMerge("" + direction);
+
+            log("***AFTER MOVE:"+totalMoveCount);
 
             // if nextRound = true then the game is still not over, else the game is over
             //gameOver = !nextRound();
@@ -397,13 +412,27 @@ public class JokerServer {
             currentPlayer.setScore(getScore() - 1);
             currentPlayer.setCombo(getCombo() - 1);
             currentPlayer.setNumberOfMoves(currentPlayer.getNumberOfMoves() - 1);
-            totalMoveCount--;
+        }
+    }
+
+    public void undoPlayer() {
+        currentPlayer = lastPlayer;
+
+        for(int i = 0; i < playerList.size(); i++){
+            if(playerList.get(i).getSocket().equals(currentPlayer.getSocket())){
+                playerList.get(i).setUndoFlag(false);
+                playerList.set(i,currentPlayer);
+            }
         }
     }
 
     public void cloneBoard() {
         // clonedBoard = board.clone();
         System.arraycopy(board, 0, clonedBoard, 0, board.length);
+    }
+
+    public void clonePlayer(){
+        lastPlayer = currentPlayer.clone();
     }
 
     public void sendPuzzle(DataOutputStream out) throws IOException { // handle later
@@ -510,7 +539,6 @@ public class JokerServer {
         }
 
         // Update current player to the next player
-
         do {
             nextPlayerIndex = (nextPlayerIndex+1)%playerList.size();
         } while (playerList.get(nextPlayerIndex) == currentPlayer || playerList.get(nextPlayerIndex).isAwaitingPlayer()); // Ensure it's not the current player
