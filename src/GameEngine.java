@@ -543,14 +543,6 @@ public class GameEngine {
 
     }
 
-    private void clearInputStream(){
-        try {
-            dataInStream.close();
-            dataInStream = new DataInputStream(clientSocket.getInputStream());
-        }catch (Exception e){
-            //Do nothing
-        }
-    }
 
     private void sendToServer(char msg){
         try {
@@ -619,7 +611,7 @@ public class GameEngine {
         //log("Try to restart the game!");
 
         // send the data to the server
-
+        clearInputStream(dataInStream);
         sendToServer(REQUEST_RESTART_THE_GAME);
             //dataOutStream.write('E');
             //dataOutStream.flush();

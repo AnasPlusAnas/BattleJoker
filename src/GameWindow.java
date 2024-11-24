@@ -56,6 +56,7 @@ public class GameWindow {
     AnimationTimer animationTimer;
     private boolean isGameOver;
     private final ArrayList<Player> playerArrayList = new ArrayList<>();
+    private ArrayList<Player> lastPlayerArrayList = new ArrayList<>();
     private int currentPlayerCount = 0;
     private boolean isGameStart;
     private boolean isAwaitingPlayer = false;
@@ -307,7 +308,7 @@ public class GameWindow {
 
         playerContainer.getChildren().clear();
 
-
+        gameEngine.getPlayerListRefresh();
     }
 
     public void refreshPlayerStat(){
@@ -392,16 +393,22 @@ public class GameWindow {
                             }
 
                             //if(playerArrayList.size() > 4) {
-                            clearPlayerStat();
+
                             //}
 
 
                             gameEngine.gameRestart();
                             gameStart();
-                            gameEngine.getPlayerListRefresh();
+                            try{
+                                Thread.sleep(100);
+                            }catch (Exception e){
+                                //Do nothing
+                            }
+                            //gameEngine.getPlayerListRefresh();
 
                             clickedWaitButton = false;
-                            //refreshPlayerStat();
+                            refreshPlayerStat();
+                            clearPlayerStat();
 
                         } catch (IOException ex) {
                             throw new RuntimeException(ex);

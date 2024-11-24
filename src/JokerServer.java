@@ -38,6 +38,7 @@ public class JokerServer {
     private int nextPlayerIndex = 0;
     private boolean restartFlag = false;
 
+
     final int[] clonedBoard = new int[SIZE * SIZE]; // for undo method
     private final Map<String, Runnable> actionMap = new HashMap<>();
 
@@ -88,7 +89,7 @@ public class JokerServer {
 
         // start the first round
         //nextRound();
-
+        //if (gameOver) return;
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) { // Allow multiple connections
                 Socket clientSocket = serverSocket.accept(); // client successfully connect to the server
@@ -244,30 +245,35 @@ public class JokerServer {
             }
 
 
-            if(direction == REQUEST_RESTART_THE_GAME && !restartFlag){
+            if((direction == REQUEST_RESTART_THE_GAME) && (restartFlag == false)){
+                restartFlag = true;
                 //DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                 //log("Restarting the game");
 
                 //sendPlayerList();
-                DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+                log("TEST");
+                log(clientSocket.toString());
+                //DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
                 awaitingPlayerJoinGame();
                 endGameAction();
+
                 //sendPuzzle(out);
                 //sendPlayerList();
 
+                //out = new DataOutputStream(clientSocket.getOutputStream());
+                //sendPuzzle(out);
+
                 synchronized (clientList) {
+                    sendPlayerList();
                     for (Socket socket : clientList) {
-                        out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
+                        DataOutputStream out = new DataOutputStream(socket.getOutputStream()); // get the output stream from
                         // the socket
                         //out.write(direction); // send data to the outputSteam
                         //out.flush(); // force to send out the data immediately
-
                         sendPuzzle(out);
-
                     }
                 }
-
-                restartFlag = true;
+                continue;
 
 /*
                 synchronized (clientList) {
@@ -301,7 +307,8 @@ public class JokerServer {
             if(direction == CHECK_IS_STARTED){
                 //DataOutputStream out = new DataOutputStream(socket.getOutputStream());
                 //_out.writeBoolean(isGameStarted);
-                sendBooleanToClient(_out,isGameStarted,"isGameStarted");
+                _out = sendBooleanToClient(_out,isGameStarted,"isGameStarted");
+                _out.flush();
                 //log("Return isGameStarted = "+isGameStarted);
                 continue;
             }
@@ -317,7 +324,8 @@ public class JokerServer {
                 }
                 //_out.writeBoolean(isAwaitingPlayer);
                 //log("Return isAwaitingPlayer = "+isAwaitingPlayer);
-                sendBooleanToClient(_out,isAwaitingPlayer, "isAwaitingPlayer");
+                _out = sendBooleanToClient(_out,isAwaitingPlayer, "isAwaitingPlayer");
+                _out.flush();
                 continue;
             }
 
@@ -407,14 +415,14 @@ public class JokerServer {
             DataOutputStream out = new DataOutputStream(client.getOutputStream());
 
             //out.write('Q');
-            sendToClient(out,SEND_REMOVE_PLAYER_FROM_SERVER);
+            out = sendToClient(out,SEND_REMOVE_PLAYER_FROM_SERVER);
             byte[] bytes = player.getPlayerName().getBytes();
             //out.writeInt(bytes.length);
-            sendIntToClient(out,bytes.length, "bytes.length");
+            out = sendIntToClient(out,bytes.length, "bytes.length");
             //out.write(bytes);
-            sendBytesToClient(out,bytes,"bytes");
+            out = sendBytesToClient(out,bytes,"bytes");
             //HERE
-            //out.flush();
+            out.flush();
         }
     }
 
@@ -431,28 +439,28 @@ public class JokerServer {
                     continue;
                 }
                 //out.write(SEND_PLAYER_LIST_FROM_SERVER);
-                sendToClient(out,SEND_PLAYER_LIST_FROM_SERVER);
+                out = sendToClient(out,SEND_PLAYER_LIST_FROM_SERVER);
                 byte[] bytes = player.getPlayerName().getBytes();
                 //out.writeInt(bytes.length);
-                sendIntToClient(out,bytes.length,"bytes.length");
+                out = sendIntToClient(out,bytes.length,"bytes.length");
                 //out.write(bytes);
-                sendBytesToClient(out,bytes,"bytes");
+                out = sendBytesToClient(out,bytes,"bytes");
                 log("Sending: "+player.getPlayerName()+" (Player name)");
                 //out.writeInt(player.getLevel());
-                sendIntToClient(out,player.getLevel(),"player.getLevel()");
+                out = sendIntToClient(out,player.getLevel(),"player.getLevel()");
                 //out.writeInt(player.getScore());
-                sendIntToClient(out,player.getScore(),"player.getScore()");
+                out = sendIntToClient(out,player.getScore(),"player.getScore()");
                 //out.writeInt(player.getCombo());
-                sendIntToClient(out, player.getCombo(),"player.getCombo()");
+                out = sendIntToClient(out, player.getCombo(),"player.getCombo()");
                 //out.writeInt(player.getNumberOfMoves());
-                sendIntToClient(out,player.getNumberOfMoves(),"player.getNumberOfMoves()");
+                out = sendIntToClient(out,player.getNumberOfMoves(),"player.getNumberOfMoves()");
                 //out.writeBoolean(player.isMyTurn());
-                sendBooleanToClient(out,player.isMyTurn(),"player.isMyTurn()");
+                out = sendBooleanToClient(out,player.isMyTurn(),"player.isMyTurn()");
                 //out.writeBoolean(player.isHost());
-                sendBooleanToClient(out,player.isHost(),"player.isHost()");
+                out = sendBooleanToClient(out,player.isHost(),"player.isHost()");
                 //out.writeBoolean(player.isAwaitingPlayer());
-                sendBooleanToClient(out,player.isAwaitingPlayer(),"player.isAwaitingPlayer()");
-                //out.flush();
+                out = sendBooleanToClient(out,player.isAwaitingPlayer(),"player.isAwaitingPlayer()");
+                out.flush();
                 //log("Sending: "+player);
                 playerListStr += player.getPlayerName()+" ";
             }
@@ -470,13 +478,16 @@ public class JokerServer {
     }
 
     private void sendGameOver() throws IOException {
-        for (Socket client : clientList) {
-            log("JokerServer.sendGameOver");
+        synchronized (playerList) {
+            for (Socket client : clientList) {
+                log("JokerServer.sendGameOver");
 
-            DataOutputStream out = new DataOutputStream(client.getOutputStream());
-            //out.write('F');
-            //out.flush();
-            sendToClient(out,SEND_GAMEOVER_FROM_SERVER);
+                DataOutputStream out = new DataOutputStream(client.getOutputStream());
+                //out.write('F');
+
+                out = sendToClient(out,SEND_GAMEOVER_FROM_SERVER);
+                out.flush();
+            }
         }
     }
 
@@ -510,91 +521,99 @@ public class JokerServer {
         lastPlayer = currentPlayer.clone();
     }
 
-    private void sendToClient(DataOutputStream out, char msg){
+    private DataOutputStream sendToClient(DataOutputStream out, char msg){
         try {
             log("Sending: "+msg+" ("+COMMAND_MAP.get(msg)+")");
             out.write(msg);
-            out.flush();
+            //out.flush();
         }catch (IOException e){
             log("Failed to send: "+msg+" ("+COMMAND_MAP.get(msg)+")");
         }
+        return out;
     }
 
-    private void sendBytesToClient(DataOutputStream out, byte[] msg){
+    private DataOutputStream sendBytesToClient(DataOutputStream out, byte[] msg){
         try {
             log("Sending: "+msg+" ("+COMMAND_MAP.get(msg)+")");
             out.write(msg);
-            out.flush();
+            //out.flush();
         }catch (IOException e){
             log("Failed to send: "+msg+" ("+COMMAND_MAP.get(msg)+")");
         }
+        return out;
     }
 
-    private void sendIntToClient(DataOutputStream out, int msg){
+    private DataOutputStream sendIntToClient(DataOutputStream out, int msg){
         try {
             log("Sending: "+msg+" ("+COMMAND_MAP.get(msg)+")");
             out.writeInt(msg);
-            out.flush();
+            //out.flush();
         }catch (IOException e){
             log("Failed to send: "+msg+" ("+COMMAND_MAP.get(msg)+")");
         }
+        return out;
     }
 
-    private void sendBooleanToClient(DataOutputStream out, boolean msg){
+    private DataOutputStream sendBooleanToClient(DataOutputStream out, boolean msg){
         try {
             log("Sending: "+msg+" ("+COMMAND_MAP.get(msg)+")");
             out.writeBoolean(msg);
-            out.flush();
+            //out.flush();
         }catch (IOException e){
             log("Failed to send: "+msg+" ("+COMMAND_MAP.get(msg)+")");
         }
+        return out;
     }
 
-    private void sendToClient(DataOutputStream out, char msg, String dataName){
+    private DataOutputStream sendToClient(DataOutputStream out, char msg, String dataName){
         try {
             log("Sending: "+msg+" ("+dataName+")");
             out.write(msg);
-            out.flush();
+            //out.flush();
         }catch (IOException e){
             log("Failed to send: "+msg+" ("+dataName+")");
         }
+        return out;
     }
 
-    private void sendBytesToClient(DataOutputStream out, byte[] msg, String dataName){
+    private DataOutputStream sendBytesToClient(DataOutputStream out, byte[] msg, String dataName){
         try {
             log("Sending: "+msg+" ("+dataName+")");
             out.write(msg);
-            out.flush();
+            //out.flush();
         }catch (IOException e){
             log("Failed to send: "+msg+" ("+dataName+")");
         }
+        return out;
     }
 
-    private void sendIntToClient(DataOutputStream out, int msg, String dataName){
+    private DataOutputStream sendIntToClient(DataOutputStream out, int msg, String dataName){
         try {
             log("Sending: "+msg+" ("+dataName+")");
             out.writeInt(msg);
-            out.flush();
+            //out.flush();
         }catch (IOException e){
             log("Failed to send: "+msg+" ("+dataName+")");
         }
+        return out;
     }
 
-    private void sendBooleanToClient(DataOutputStream out, boolean msg, String dataName){
+    private DataOutputStream sendBooleanToClient(DataOutputStream out, boolean msg, String dataName){
         try {
             log("Sending: "+msg+" ("+dataName+")");
             out.writeBoolean(msg);
-            out.flush();
+            //out.flush();
         }catch (IOException e){
             log("Failed to send: "+msg+" ("+dataName+")");
         }
+        return out;
     }
 
     public void sendPuzzle(DataOutputStream out) throws IOException { // handle later
         //out.write('A'); // going to send out an array to client
-        sendToClient(out,SEND_ARRAY_FROM_SERVER);
+        out = sendToClient(out,SEND_ARRAY_FROM_SERVER);
         //out.writeInt(board.length); // size of array
-        sendIntToClient(out,board.length,"board.length");
+        out = sendIntToClient(out,board.length,"board.length");
         String boardStr = "[ ";
         for (int i : board) {
             out.writeInt(i); // send the value to the array
@@ -652,6 +671,7 @@ public class JokerServer {
                 // update the database if the game is over
                 if (gameOver) {
                     try {
+                        restartFlag = false;
                         // get the player with the highest score
                         Player player = playerList.stream().max(Comparator.comparingInt(Player::getScore)).get();
 
@@ -886,8 +906,10 @@ public class JokerServer {
                 Player player = playerList.get(i);
                 //playerList.remove(player);
                 removedList.add(player);
-                player.setAwaitingPlayer(true);
+                //player.setAwaitingPlayer(true);
+
                 awaitingPlayerList.add(player);
+
                 String awaitingPlayerListStr = "[ ";
                 for(int j = 0; j < awaitingPlayerList.size(); j++){
                     awaitingPlayerListStr += awaitingPlayerList.get(j).getPlayerName()+" ";
@@ -909,7 +931,7 @@ public class JokerServer {
                 Player player = awaitingPlayerList.get(i);
                 //awaitingPlayerList.remove(player);
                 removedList.add(player);
-                player.setAwaitingPlayer(false);
+                //player.setAwaitingPlayer(false);
                 //player.resetPlayerStatus();
                 playerList.add(player);
             }
@@ -925,11 +947,19 @@ public class JokerServer {
             if(i == 0){
                 player.setHost(true);
                 player.setMyTurn(true);
+                player.setAwaitingPlayer(false);
                 currentPlayer = player;
             }else{
                 player.setHost(false);
                 player.setMyTurn(false);
+                player.setAwaitingPlayer(false);
             }
+        }
+
+        for(int i = 0; i < awaitingPlayerList.size(); i++){
+            Player player = awaitingPlayerList.get(i);
+            //player.resetPlayerStatus();
+            player.setAwaitingPlayer(true);
         }
 
         removedList = new ArrayList<>();
@@ -981,8 +1011,13 @@ public class JokerServer {
          */
         nextRound();
         isGameStarted = true;
-        restartFlag = false;
+        //restartFlag = false;
         nextPlayerIndex = 0;
+        try {
+            sendPlayerList();
+        }catch (Exception e){
+            log("Failed to sendPlayerList()");
+        }
     }
 
     private void log(String msg){
